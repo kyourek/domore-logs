@@ -1,16 +1,11 @@
 ﻿using System;
+using System.ComponentModel;
 using System.IO;
 using DirectoryHelper = System.IO.Directory;
 using PathHelper = System.IO.Path;
 
 namespace Domore.Logs.Handlers {
     class LogFile : LogHandler.Background {
-        static bool DirectoryCreated;
-        static readonly string Directory = PathHelper.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
-            "domore",
-            "log");
-
         static string SanitizePath(string path) {
             if (null == path) throw new ArgumentNullException(nameof(path));
 
@@ -22,6 +17,8 @@ namespace Domore.Logs.Handlers {
 
             return sanePath;
         }
+
+        bool DirectoryCreated;
 
         DateTime? _LastWriteTime;
         DateTime? LastWriteTime {
@@ -35,6 +32,15 @@ namespace Domore.Logs.Handlers {
                 return _LastWriteTime;
             }
             set => Change(ref _LastWriteTime, value, nameof(LastWriteTime));
+        }
+
+        protected override void OnPropertyChanged(PropertyChangedEventArgs e) {
+            base.OnPropertyChanged(e);
+            if (e != null) {
+                if (e.PropertyName == nameof(Name) || e.PropertyName == nameof(Directory)) {
+                    Path = null;
+                }
+            }
         }
 
         protected override void HandleAction(string message) {
@@ -58,6 +64,16 @@ namespace Domore.Logs.Handlers {
             LastWriteTime = entryTime;
         }
 
+        string _Directory;
+        public string Directory {
+            get => _Directory ?? (_Directory = PathHelper.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), "Domore.Logs"));
+            set {
+                if (Change(ref _Directory, value, nameof(Directory))) {
+                    DirectoryCreated = false;
+                }
+            }
+        }
+
         string _Path;
         public string Path {
             get {
@@ -67,6 +83,7 @@ namespace Domore.Logs.Handlers {
                 }
                 return _Path;
             }
+            private set => Change(ref _Path, value, nameof(Path));
         }
 
         TimeSpan _ClearInterval = TimeSpan.FromDays(7);

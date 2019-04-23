@@ -37,7 +37,7 @@ namespace Domore.Logs.Handlers {
 
             static void HandleThreadStart() {
                 for (; ; ) {
-                    var item = default(EntryItem);
+                    EntryItem item;
                     try {
                         item = EntryQueue.Take();
                     }

@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 
 namespace Domore.Logs {
-    internal class LogManager {
+    class LogManager {
         readonly object Locker = new object();
         readonly ICollection<WeakReference> LoggerReferences = new List<WeakReference>();
         readonly ICollection<WeakReference> HandlerReferences = new List<WeakReference>();

@@ -6,7 +6,7 @@ using System.Linq;
 namespace Domore.Logs {
     using ComponentModel;
 
-    internal class Logger : NotifyPropertyChangedImplementation, ILog {
+    class Logger : NotifyPropertyChangedImplementation, ILog {
         readonly object Locker = new object();
 
         ISet<ILogHandler> Handlers { get; } = new HashSet<ILogHandler>();

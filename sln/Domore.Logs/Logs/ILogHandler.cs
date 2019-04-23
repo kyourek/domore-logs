@@ -9,7 +9,7 @@ namespace Domore.Logs {
     [InterfaceType(ComInterfaceType.InterfaceIsIDispatch)]
 #endif
     public interface ILogHandler {
-    [DispId(1)]
+        [DispId(1)]
         LogSeverity Severity { get; }
 
         [DispId(2)]

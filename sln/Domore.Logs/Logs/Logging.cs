@@ -2,35 +2,18 @@
 using System.Runtime.InteropServices;
 
 namespace Domore.Logs {
-    using Handlers;
-
     [Guid("D52278CA-BF09-4640-8C39-8F4B057766E9")]
     [ComVisible(true)]
     [ClassInterface(ClassInterfaceType.None)]
     public class Logging : ILogging {
-        static readonly LogManager Manager = new LogManager();
+        static readonly ILogProvider Provider = new LogProvider();
 
-        static Logger For(string name, Type type, object owner) {
-            //var config = Configuration.Block;
-            var logger = /*config.Configure(*/new Logger(name, type, owner);
-
-            var logFile = new LogFile { Name = logger.Name + ".log", Severity = LogSeverity.Error };
-            //config.Configure(logFile);
-            //config.Configure(logFile, logFile.Name);
-            logger.AddHandler(logFile);
-
-            var logMail = new LogMail { Name = logger.Name + ".mail" , Severity = LogSeverity.Critical };
-            //config.Configure(logMail);
-            //config.Configure(logMail, logMail.Name);
-            logger.AddHandler(logMail);
-
-            Manager.AddLogger(logger);
-
-            return logger;
+        static ILog For(string name, Type type, object owner) {
+            return Provider.GetLog(name, type, owner);
         }
 
         public static void Add(ILogHandler handler, params object[] logs) {
-            Manager.AddHandler(handler, logs);
+            Provider.AddHandler(handler, logs);
         }
 
         public static ILog For(Type type, string name = null) {
