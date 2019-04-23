@@ -7,16 +7,14 @@ namespace Domore.Logs {
     using ComponentModel;
 
     internal class Logger : NotifyPropertyChangedImplementation, ILog {
-        private readonly object Locker = new object();
+        readonly object Locker = new object();
 
-        private ISet<ILogHandler> Handlers { get { return _Handlers; } }
-        private readonly ISet<ILogHandler> _Handlers = new HashSet<ILogHandler>();
+        ISet<ILogHandler> Handlers { get; } = new HashSet<ILogHandler>();
 
-        private void Handler_PropertyChanged(object sender, PropertyChangedEventArgs e) {
+        void Handler_PropertyChanged(object sender, PropertyChangedEventArgs e) {
             if (e != null) {
-                if (e.PropertyName == "Severity") {
-                    var handler = sender as ILogHandler;
-                    if (handler != null) {
+                if (e.PropertyName == nameof(ILogHandler.Severity)) {
+                    if (sender is ILogHandler handler) {
                         var handlerSeverity = handler.Severity;
                         if (handlerSeverity < Severity) {
                             Severity = handlerSeverity;
@@ -27,7 +25,7 @@ namespace Domore.Logs {
         }
 
         private void Entry(LogEntry entry) {
-            if (null == entry) throw new ArgumentNullException("entry");
+            if (null == entry) throw new ArgumentNullException(nameof(entry));
 
             var handlers = GetHandlers();
             var dataDict = new Dictionary<string, string>();
@@ -35,8 +33,7 @@ namespace Domore.Logs {
             foreach (var handler in handlers) {
                 if (handler.Severity <= entry.Severity) {
                     var fmt = handler.Format ?? "";
-                    var data = default(string);
-                    if (dataDict.TryGetValue(fmt, out data) == false) {
+                    if (dataDict.TryGetValue(fmt, out var data) == false) {
                         data = entry.ToString(fmt);
                         dataDict[fmt] = data;
                     }
@@ -46,34 +43,20 @@ namespace Domore.Logs {
             }
         }
 
-        public string Name { get { return _Name; } }
-        private readonly string _Name;
+        public string Name { get; }
+        public Type Type { get; }
+        public object Owner { get; }
 
-        public Type Type { get { return _Type; } }
-        private readonly Type _Type;
-
-        public object Owner { get { return _Owner; } }
-        private readonly object _Owner;
-
+        LogSeverity _Severity = LogSeverity.None;
         public LogSeverity Severity {
-            get { return _Severity; }
-            private set {
-                if (_Severity != value) {
-                    _Severity = value;
-                    NotifyPropertyChanged("Severity");
-                }
-            }
+            get => _Severity;
+            private set => Change(ref _Severity, value, nameof(Severity));
         }
-        private LogSeverity _Severity = LogSeverity.None;
 
-        public bool Enabled(LogSeverity severity) {
-            return severity == LogSeverity.None
-                ? false
-                : severity >= Severity;
-        }
+        public bool Enabled(LogSeverity severity) => severity == LogSeverity.None ? false : severity >= Severity;
 
         public bool AddHandler(ILogHandler handler) {
-            if (null == handler) throw new ArgumentNullException("handler");
+            if (null == handler) throw new ArgumentNullException(nameof(handler));
             
             var added = default(bool);
             lock (Locker) {
@@ -81,9 +64,8 @@ namespace Domore.Logs {
             }
 
             if (added) {
-                var propChanger = handler as INotifyPropertyChanged;
-                if (propChanger != null) {
-                    propChanger.PropertyChanged += Handler_PropertyChanged;
+                if (handler is INotifyPropertyChanged implementation) {
+                    implementation.PropertyChanged += Handler_PropertyChanged;
                 }
 
                 var handlerSeverity = handler.Severity;
@@ -102,9 +84,8 @@ namespace Domore.Logs {
             }
 
             if (removed) {
-                var propChanger = handler as INotifyPropertyChanged;
-                if (propChanger != null) {
-                    propChanger.PropertyChanged -= Handler_PropertyChanged;
+                if (handler is INotifyPropertyChanged implementation) {
+                    implementation.PropertyChanged -= Handler_PropertyChanged;
                 }
 
                 var handlerSeverity = handler.Severity;
@@ -135,74 +116,29 @@ namespace Domore.Logs {
             Entry(new LogEntry(severity, Name, data));
         }
 
-        public bool DebugEnabled {
-            get { return Enabled(LogSeverity.Debug); }
-        }
-
-        public bool InfoEnabled {
-            get { return Enabled(LogSeverity.Info); }
-        }
-
-        public bool WarnEnabled {
-            get { return Enabled(LogSeverity.Warn); }
-        }
-
-        public bool ErrorEnabled {
-            get { return Enabled(LogSeverity.Error); }
-        }
-
-        public bool CriticalEnabled {
-            get { return Enabled(LogSeverity.Critical); }
-        }
+        public bool DebugEnabled { get => Enabled(LogSeverity.Debug); }
+        public bool InfoEnabled { get => Enabled(LogSeverity.Info); }
+        public bool WarnEnabled { get => Enabled(LogSeverity.Warn); }
+        public bool ErrorEnabled { get => Enabled(LogSeverity.Error); }
+        public bool CriticalEnabled { get => Enabled(LogSeverity.Critical); }
 
         public Logger(string name, Type type, object owner) {
-            _Name = name;
-            _Type = type;
-            _Owner = owner;
+            Name = name;
+            Type = type;
+            Owner = owner;
         }
 
-        public void Debug(params object[] data) {
-            Entry(LogSeverity.Debug, data);
-        }
+        public void Debug(params object[] data) => Entry(LogSeverity.Debug, data);
+        public void Info(params object[] data) => Entry(LogSeverity.Info, data);
+        public void Warn(params object[] data) => Entry(LogSeverity.Warn, data);
+        public void Error(params object[] data) => Entry(LogSeverity.Error, data);
+        public void Critical(params object[] data) => Entry(LogSeverity.Critical, data);
 
-        public void Info(params object[] data) {
-            Entry(LogSeverity.Info, data);
-        }
-
-        public void Warn(params object[] data) {
-            Entry(LogSeverity.Warn, data);
-        }
-
-        public void Error(params object[] data) {
-            Entry(LogSeverity.Error, data);
-        }
-
-        public void Critical(params object[] data) {
-            Entry(LogSeverity.Critical, data);
-        }
-
-        void ILog.Entry(LogSeverity severity, string message) {
-            Entry(severity, message);
-        }
-
-        void ILog.Debug(string message) {
-            Debug(message);
-        }
-
-        void ILog.Info(string message) {
-            Info(message);
-        }
-
-        void ILog.Warn(string message) {
-            Warn(message);
-        }
-
-        void ILog.Error(string message ){
-            Error(message);
-        }
-
-        void ILog.Critical(string message) {
-            Critical(message);
-        }
+        void ILog.Entry(LogSeverity severity, string message) => Entry(severity, message);
+        void ILog.Debug(string message) => Debug(message);
+        void ILog.Info(string message) => Info(message);
+        void ILog.Warn(string message) => Warn(message);
+        void ILog.Error(string message) => Error(message);
+        void ILog.Critical(string message) => Critical(message);
     }
 }

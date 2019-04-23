@@ -4,13 +4,13 @@ using System.Linq;
 
 namespace Domore.Logs {
     internal class LogManager {
-        private readonly object Locker = new object();
-        private readonly ICollection<WeakReference> LoggerReferences = new List<WeakReference>();
-        private readonly ICollection<WeakReference> HandlerReferences = new List<WeakReference>();
-        private readonly IDictionary<WeakReference, object[]> HandlerLogs = new Dictionary<WeakReference, object[]>();
+        readonly object Locker = new object();
+        readonly ICollection<WeakReference> LoggerReferences = new List<WeakReference>();
+        readonly ICollection<WeakReference> HandlerReferences = new List<WeakReference>();
+        readonly IDictionary<WeakReference, object[]> HandlerLogs = new Dictionary<WeakReference, object[]>();
 
-        private void AddHandlers(Logger logger) {
-            if (null == logger) throw new ArgumentNullException("logger");
+        void AddHandlers(Logger logger) {
+            if (null == logger) throw new ArgumentNullException(nameof(logger));
 
             HandlerReferences
                 .ToList()

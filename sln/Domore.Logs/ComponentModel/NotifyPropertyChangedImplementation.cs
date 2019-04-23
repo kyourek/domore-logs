@@ -10,9 +10,18 @@ namespace Domore.ComponentModel {
             NotifyPropertyChanged(string.Empty);
         }
 
+        protected bool Change<T>(ref T field, T value, string propertyName) {
+            if (Equals(field, value)) {
+                return false;
+            }
+
+            field = value;
+            NotifyPropertyChanged(propertyName);
+            return true;
+        }
+
         protected virtual void OnPropertyChanged(PropertyChangedEventArgs e) {
-            var handler = PropertyChanged;
-            if (handler != null) handler.Invoke(this, e);
+            PropertyChanged?.Invoke(this, e);
         }
 
         public event PropertyChangedEventHandler PropertyChanged;

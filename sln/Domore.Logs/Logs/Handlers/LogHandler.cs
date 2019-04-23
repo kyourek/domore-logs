@@ -7,50 +7,35 @@ using System.Threading;
 namespace Domore.Logs.Handlers {
     using ComponentModel;
 
-    internal abstract class LogHandler : NotifyPropertyChangedImplementation, ILogHandler {
+    abstract class LogHandler : NotifyPropertyChangedImplementation, ILogHandler {
+        LogSeverity _Severity = LogSeverity.None;
         public LogSeverity Severity {
-            get { return _Severity; }
-            set {
-                if (_Severity != value) {
-                    _Severity = value;
-                    NotifyPropertyChanged("Severity");
-                }
-            }
+            get => _Severity;
+            set => Change(ref _Severity, value, nameof(Severity));
         }
-        private LogSeverity _Severity = LogSeverity.None;
 
+        string _Name;
         public string Name {
-            get { return _Name; }
-            set {
-                if (_Name != value) {
-                    _Name = value;
-                    NotifyPropertyChanged("Name");
-                }
-            }
+            get => _Name;
+            set => Change(ref _Name, value, nameof(Name));
         }
-        private string _Name;
 
+        string _Format;
         public string Format {
-            get { return _Format; }
-            set {
-                if (_Format != value) {
-                    _Format = value;
-                    NotifyPropertyChanged("Format");
-                }
-            }
+            get => _Format;
+            set => Change(ref _Format, value, nameof(Format));
         }
-        private string _Format;
 
         public abstract void Handle(string entry);
 
-        internal abstract class Background : LogHandler {
-            private static Thread HandleThread;
-            private static readonly object EntryListLocker = new object();
-            private static readonly object HandleThreadLocker = new object();
-            private static readonly List<EntryItem> EntryList = new List<EntryItem>();
-            private static readonly BlockingCollection<EntryItem> EntryQueue = new BlockingCollection<EntryItem>();
+        public abstract class Background : LogHandler {
+            static Thread HandleThread;
+            static readonly object EntryListLocker = new object();
+            static readonly object HandleThreadLocker = new object();
+            static readonly List<EntryItem> EntryList = new List<EntryItem>();
+            static readonly BlockingCollection<EntryItem> EntryQueue = new BlockingCollection<EntryItem>();
 
-            private static void HandleThreadStart() {
+            static void HandleThreadStart() {
                 for (; ; ) {
                     var item = default(EntryItem);
                     try {
@@ -80,7 +65,7 @@ namespace Domore.Logs.Handlers {
             public Exception HandleThreadError { get; private set; }
 
             public bool Handling {
-                get {
+                get { 
                     lock (EntryListLocker) {
                         return EntryList
                             .Where(item => item.Handler == this)
@@ -108,16 +93,13 @@ namespace Domore.Logs.Handlers {
                 }
             }
 
-            private class EntryItem {
-                public string Entry { get { return _Entry; } }
-                private readonly string _Entry;
-
-                public Background Handler { get { return _Handler; } }
-                private readonly Background _Handler;
+            class EntryItem {
+                public string Entry { get; }
+                public Background Handler { get; }
 
                 public EntryItem(Background handler, string entry) {
-                    _Entry = entry;
-                    _Handler = handler;
+                    Entry = entry;
+                    Handler = handler;
                 }
             }
         }

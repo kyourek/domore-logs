@@ -2,12 +2,12 @@
 using System.Net.Mail;
 
 namespace Domore.Logs.Handlers {
-    internal class LogMail : LogHandler.Background {
+    class LogMail : LogHandler.Background {
+        MailService _Mail;
         internal MailService Mail {
-            get { return _Mail ?? (_Mail = new MailService()); }
-            set { _Mail = value; }
+            get => _Mail ?? (_Mail = new MailService());
+            set => Change(ref _Mail, value, nameof(Mail));
         }
-        private MailService _Mail;
 
         protected override void HandleAction(string message) {
             var to = To;
@@ -27,48 +27,48 @@ namespace Domore.Logs.Handlers {
             }
         }
 
+        string _Subject;
         public string Subject {
-            get { return _Subject ?? (_Subject = "[Domore.Logs LogMail] " + Name); }
-            set { _Subject = value; }
+            get => _Subject ?? (_Subject = "[Domore.Logs LogMail] " + Name);
+            set => Change(ref _Subject, value, nameof(Subject));
         }
-        private string _Subject;
 
+        string _Host;
         public string Host {
-            get { return _Host; }
-            set { _Host = value; }
+            get => _Host;
+            set => Change(ref _Host, value, nameof(Host));
         }
-        private string _Host;
 
+        int _Port = 25;
         public int Port {
-            get { return _Port; }
-            set { _Port = value; }
+            get => _Port;
+            set => Change(ref _Port, value, nameof(Port));
         }
-        private int _Port = 25;
 
+        string _FromAddress;
         public string FromAddress {
-            get { return _FromAddress; }
-            set { _FromAddress = value; }
+            get => _FromAddress;
+            set => Change(ref _FromAddress, value, nameof(FromAddress));
         }
-        private string _FromAddress;
 
+        string _FromDisplayName;
         public string FromDisplayName {
-            get { return _FromDisplayName ?? (_FromDisplayName = "LogMail"); }
-            set { _FromDisplayName = value; }
+            get => _FromDisplayName ?? (_FromDisplayName = "LogMail");
+            set => Change(ref _FromDisplayName, value, nameof(FromDisplayName));
         }
-        private string _FromDisplayName;
 
+        string _To;
         public string To {
-            get { return _To; }
-            set { _To = value; }
+            get => _To;
+            set => Change(ref _To, value, nameof(To));
         }
-        private string _To;
 
         internal class MailService {
+            Action<SmtpClient, MailMessage> _Send;
             public Action<SmtpClient, MailMessage> Send {
-                get { return _Send ?? (_Send = (smtp, mail) => smtp.Send(mail)); }
-                set { _Send = value; }
+                get => _Send ?? (_Send = (smtp, mail) => smtp.Send(mail));
+                set => _Send = value;
             }
-            private Action<SmtpClient, MailMessage> _Send;
         }
     }
 }
