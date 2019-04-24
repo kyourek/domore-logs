@@ -53,7 +53,7 @@ namespace Domore.Logs {
             private set => Change(ref _Severity, value, nameof(Severity));
         }
 
-        public bool Enabled(LogSeverity severity) => severity == LogSeverity.None ? false : severity >= Severity;
+        public bool Enabled(LogSeverity severity) => severity == LogSeverity.None ? false : (severity >= Severity);
 
         public bool AddHandler(ILogHandler handler) {
             if (null == handler) throw new ArgumentNullException(nameof(handler));

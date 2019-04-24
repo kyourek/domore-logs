@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading;
-
-namespace Domore.Logs.Handlers {
+﻿namespace Domore.Logs.Handlers {
     using ComponentModel;
 
     abstract class LogHandler : NotifyPropertyChangedImplementation, ILogHandler {
@@ -27,81 +21,5 @@ namespace Domore.Logs.Handlers {
         }
 
         public abstract void Handle(string entry);
-
-        public abstract class Background : LogHandler {
-            static Thread HandleThread;
-            static readonly object EntryListLocker = new object();
-            static readonly object HandleThreadLocker = new object();
-            static readonly List<EntryItem> EntryList = new List<EntryItem>();
-            static readonly BlockingCollection<EntryItem> EntryQueue = new BlockingCollection<EntryItem>();
-
-            static void HandleThreadStart() {
-                for (; ; ) {
-                    EntryItem item;
-                    try {
-                        item = EntryQueue.Take();
-                    }
-                    catch (ObjectDisposedException) {
-                        break;
-                    }
-
-                    var entry = item.Entry;
-                    var handler = item.Handler;
-                    try {
-                        handler.HandleAction(entry);
-                    }
-                    catch (Exception ex) {
-                        handler.HandleThreadError = ex;
-                    }
-
-                    lock (EntryListLocker) {
-                        EntryList.Remove(item);
-                    }
-                }
-            }
-
-            protected abstract void HandleAction(string entry);
-
-            public Exception HandleThreadError { get; private set; }
-
-            public bool Handling {
-                get { 
-                    lock (EntryListLocker) {
-                        return EntryList
-                            .Where(item => item.Handler == this)
-                            .Count() > 0;
-                    }
-                }
-            }
-
-            public sealed override void Handle(string entry) {
-                var item = new EntryItem(this, entry);
-                lock (EntryListLocker) {
-                    EntryList.Add(item);
-                    EntryQueue.Add(item);
-                }
-
-                if (HandleThread == null) {
-                    lock (HandleThreadLocker) {
-                        if (HandleThread == null) {
-                            HandleThread = new Thread(HandleThreadStart);
-                            HandleThread.Name = typeof(Background).FullName;
-                            HandleThread.IsBackground = true;
-                            HandleThread.Start();
-                        }
-                    }
-                }
-            }
-
-            class EntryItem {
-                public string Entry { get; }
-                public Background Handler { get; }
-
-                public EntryItem(Background handler, string entry) {
-                    Entry = entry;
-                    Handler = handler;
-                }
-            }
-        }
     }
 }

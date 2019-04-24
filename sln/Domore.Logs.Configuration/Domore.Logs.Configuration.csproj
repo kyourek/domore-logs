@@ -9,7 +9,4 @@
   <ItemGroup>
     <ProjectReference Include="..\Domore.Logs\Domore.Logs.csproj" />
   </ItemGroup>
-  <ItemGroup>
-    <Folder Include="Configuration\" />
-  </ItemGroup>
 </Project>

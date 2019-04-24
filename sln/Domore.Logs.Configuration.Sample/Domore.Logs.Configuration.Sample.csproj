@@ -1,0 +1,14 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFrameworks>net40;net45;netcoreapp2.0</TargetFrameworks>
+    <RootNamespace>Domore</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Domore.Configuration.ConfigurationManager" Version="2.0.0" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Domore.Logs.Configuration\Domore.Logs.Configuration.csproj" />
+    <ProjectReference Include="..\Domore.Logs\Domore.Logs.csproj" />
+  </ItemGroup>
+</Project>

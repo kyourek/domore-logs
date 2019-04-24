@@ -6,15 +6,18 @@ namespace Domore.Logs {
     [ComVisible(true)]
     [ClassInterface(ClassInterfaceType.None)]
     public class Logging : ILogging {
-        static readonly ILogProvider Provider = new LogProvider();
+        static readonly LogManager Manager = new LogManager();
 
-        static ILog For(string name, Type type, object owner) {
-            return Provider.GetLog(name, type, owner);
+        static ILog For(string name, Type type, object owner) => 
+            Manager.GetLog(name, type, owner);
+
+        public static ILogConfiguration Configuration {
+            get => Manager.Configuration;
+            set => Manager.Configuration = value;
         }
 
-        public static void Add(ILogHandler handler, params object[] logs) {
-            Provider.AddHandler(handler, logs);
-        }
+        public static void Add(ILogHandler handler, params object[] logs) => 
+            Manager.AddHandler(handler, logs);
 
         public static ILog For(Type type, string name = null) {
             if (null == type) throw new ArgumentNullException(nameof(type));
@@ -27,8 +30,15 @@ namespace Domore.Logs {
             return For(name ?? type.FullName, type, owner);
         }
 
-        ILog ILogging.For(string name) {
-            return For(name, null, null);
+        ILogConfiguration ILogging.Configuration {
+            get => Configuration;
+            set => Configuration = value;
         }
+
+        ILog ILogging.For(string name) => For(name, null, null);
+        ILog ILogging.For(Type type, string name) => For(type, name);
+        ILog ILogging.For(object owner, string name) => For(owner, name);
+        void ILogging.Add(ILogHandler handler, object log) => Add(handler, log);
+        void ILogging.Add(ILogHandler handler, params object[] logs) => Add(handler, logs);
     }
 }
