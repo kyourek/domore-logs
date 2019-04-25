@@ -10,6 +10,6 @@ namespace Domore.Logs {
 #endif
     public interface ILogConfiguration {
         [ComVisible(false)]
-        void Configure(ILogHandler handler, string key = null);
+        void Configure(object obj, string key = null);
     }
 }

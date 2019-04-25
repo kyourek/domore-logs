@@ -2,15 +2,7 @@
 
 namespace Domore.ComponentModel {
     public class NotifyPropertyChangedImplementation : INotifyPropertyChanged {
-        protected void NotifyPropertyChanged(string propertyName) {
-            OnPropertyChanged(new PropertyChangedEventArgs(propertyName));
-        }
-
-        protected void NotifyPropertyChanged() {
-            NotifyPropertyChanged(string.Empty);
-        }
-
-        protected bool Change<T>(ref T field, T value, string propertyName) {
+        internal bool Change<T>(ref T field, T value, string propertyName) {
             if (Equals(field, value)) {
                 return false;
             }
@@ -18,6 +10,14 @@ namespace Domore.ComponentModel {
             field = value;
             NotifyPropertyChanged(propertyName);
             return true;
+        }
+
+        protected void NotifyPropertyChanged(string propertyName) {
+            OnPropertyChanged(new PropertyChangedEventArgs(propertyName));
+        }
+
+        protected void NotifyPropertyChanged() {
+            NotifyPropertyChanged(string.Empty);
         }
 
         protected virtual void OnPropertyChanged(PropertyChangedEventArgs e) {

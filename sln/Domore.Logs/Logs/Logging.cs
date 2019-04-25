@@ -6,14 +6,31 @@ namespace Domore.Logs {
     [ComVisible(true)]
     [ClassInterface(ClassInterfaceType.None)]
     public class Logging : ILogging {
-        static readonly LogManager Manager = new LogManager();
+        static LogManager _Manager;
+        static LogManager Manager {
+            get {
+                if (_Manager == null) {
+                    _Manager = new LogManager { Configuration = Configuration };
+                    Configuration.Configure(_Manager);
+                    Configuration.Configure(_Manager, "Logging");
+                }
+                return _Manager;
+            }
+            set => _Manager = value;
+        }
 
         static ILog For(string name, Type type, object owner) => 
             Manager.GetLog(name, type, owner);
 
+        static ILogConfiguration _Configuration;
         public static ILogConfiguration Configuration {
-            get => Manager.Configuration;
-            set => Manager.Configuration = value;
+            get => _Configuration ?? (_Configuration = new LogConfiguration());
+            set => _Configuration = value;
+        }
+
+        public static TimeSpan CompleteTimeout {
+            get => Manager.CompleteTimeout;
+            set => Manager.CompleteTimeout = value;
         }
 
         public static void Add(ILogHandler handler, params object[] logs) => 
@@ -30,15 +47,23 @@ namespace Domore.Logs {
             return For(name ?? type.FullName, type, owner);
         }
 
-        ILogConfiguration ILogging.Configuration {
-            get => Configuration;
-            set => Configuration = value;
+        public static void Complete() {
+            Manager.Complete();
+            Manager.Dispose();
         }
 
+        public static void Reset() {
+            Manager = null;
+        }
+
+        TimeSpan ILogging.CompleteTimeout { get => CompleteTimeout; set => CompleteTimeout = value; }
+        ILogConfiguration ILogging.Configuration { get => Configuration; set => Configuration = value; }
         ILog ILogging.For(string name) => For(name, null, null);
         ILog ILogging.For(Type type, string name) => For(type, name);
         ILog ILogging.For(object owner, string name) => For(owner, name);
         void ILogging.Add(ILogHandler handler, object log) => Add(handler, log);
         void ILogging.Add(ILogHandler handler, params object[] logs) => Add(handler, logs);
+        void ILogging.Complete() => Complete();
+        void ILogging.Reset() => Reset();
     }
 }

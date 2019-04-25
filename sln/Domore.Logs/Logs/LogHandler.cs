@@ -1,7 +1,7 @@
-﻿namespace Domore.Logs.Handlers {
+﻿namespace Domore.Logs {
     using ComponentModel;
 
-    abstract class LogHandler : NotifyPropertyChangedImplementation, ILogHandler {
+    public abstract class LogHandler : NotifyPropertyChangedImplementation, ILogHandler {
         LogSeverity _Severity = LogSeverity.None;
         public LogSeverity Severity {
             get => _Severity;
@@ -20,6 +20,6 @@
             set => Change(ref _Format, value, nameof(Format));
         }
 
-        public abstract void Handle(string entry);
+        public abstract void Handle(string message, LogSeverity severity);
     }
 }

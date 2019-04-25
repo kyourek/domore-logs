@@ -14,10 +14,19 @@ namespace Domore.Logs {
         ILogConfiguration Configuration { get; set; }
 
         [DispId(2)]
-        ILog For(string name);
+        TimeSpan CompleteTimeout { get; set; }
 
         [DispId(3)]
+        ILog For(string name);
+
+        [DispId(4)]
         void Add(ILogHandler handler, object log);
+
+        [DispId(5)]
+        void Complete();
+
+        [DispId(6)]
+        void Reset();
 
         [ComVisible(false)]
         ILog For(Type type, string name = null);

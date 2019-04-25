@@ -27,18 +27,19 @@ namespace Domore.Logs {
         private void Entry(LogEntry entry) {
             if (null == entry) throw new ArgumentNullException(nameof(entry));
 
+            var severity = entry.Severity;
             var handlers = GetHandlers();
-            var dataDict = new Dictionary<string, string>();
+            var messages = new Dictionary<string, string>();
 
             foreach (var handler in handlers) {
-                if (handler.Severity <= entry.Severity) {
-                    var fmt = handler.Format ?? "";
-                    if (dataDict.TryGetValue(fmt, out var data) == false) {
-                        data = entry.ToString(fmt);
-                        dataDict[fmt] = data;
+                if (handler.Severity <= severity) {
+                    var format = handler.Format ?? "";
+
+                    if (messages.TryGetValue(format, out var message) == false) {
+                        messages[format] = message = entry.ToString(format);
                     }
 
-                    handler.Handle(data);
+                    handler.Handle(message, severity);
                 }
             }
         }

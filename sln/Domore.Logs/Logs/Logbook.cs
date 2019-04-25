@@ -3,33 +3,24 @@ using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 
 namespace Domore.Logs {
-    using ComponentModel;
-
-    public class Logbook : NotifyPropertyChangedImplementation, ILogHandler {
+    public class Logbook : LogHandler {
         int TruncateIndex = 0;
         readonly object Locker = new object();
 
-        ObservableCollection<string> EntryCollection { get; }
+        ObservableCollection<LogbookEntry> EntryCollection { get; }
 
         void EntryCollection_CollectionChanged(object sender, NotifyCollectionChangedEventArgs e) {
-            var handler = EntriesChanged;
-            if (handler != null) handler.Invoke(this, e);
+            EntriesChanged?.Invoke(this, e);
         }
 
         public event NotifyCollectionChangedEventHandler EntriesChanged;
 
-        public ReadOnlyObservableCollection<string> Entries { get; }
+        public ReadOnlyObservableCollection<LogbookEntry> Entries { get; }
 
-        bool _Handle = true;
-        public bool Handle {
-            get => _Handle;
-            set => Change(ref _Handle, value, nameof(Handle));
-        }
-
-        LogSeverity _Severity = LogSeverity.None;
-        public LogSeverity Severity {
-            get => _Severity;
-            set => Change(ref _Severity, value, nameof(Severity));
+        bool _Handling = true;
+        public bool Handling {
+            get => _Handling;
+            set => Change(ref _Handling, value, nameof(Handling));
         }
 
         int _DataLimit;
@@ -72,23 +63,17 @@ namespace Domore.Logs {
             private set => Change(ref _Data, value, nameof(Data));
         }
 
-        string _Format;
-        public string Format {
-            get => _Format ?? (_Format = "{Data}");
-            set => Change(ref _Format, value, nameof(Format));
-        }
-
         public Logbook() {
-            EntryCollection = new ObservableCollection<string>();
+            EntryCollection = new ObservableCollection<LogbookEntry>();
             EntryCollection.CollectionChanged += EntryCollection_CollectionChanged;
-            Entries = new ReadOnlyObservableCollection<string>(EntryCollection);
+            Entries = new ReadOnlyObservableCollection<LogbookEntry>(EntryCollection);
         }
 
         public Logbook(params object[] logs) : this() {
             Logging.Add(this, logs);
         }
 
-        public void Add(string entry) {
+        public void Add(string message, LogSeverity severity) {
             var maxLen = DataLimit;
             var maxCnt = EntryLimit;
             if (maxLen < 1 && maxCnt < 1) return;
@@ -98,7 +83,7 @@ namespace Domore.Logs {
                 var truncDelay = TruncateDelay;
 
                 if (maxLen > 0) {
-                    var logStr = Data + (entry ?? "").Trim() + Environment.NewLine;
+                    var logStr = Data + (message ?? "").Trim() + Environment.NewLine;
 
                     if (truncIndex > truncDelay) {
                         var logLen = logStr.Length;
@@ -119,7 +104,7 @@ namespace Domore.Logs {
                         }
                     }
 
-                    entryColl.Add(entry);
+                    entryColl.Add(new LogbookEntry(message, severity));
                 }
 
                 TruncateIndex = truncIndex > truncDelay
@@ -140,9 +125,9 @@ namespace Domore.Logs {
             EntryLimit = limit;
         }
 
-        void ILogHandler.Handle(string entry) {
-            if (Handle) {
-                Add(entry);
+        public override void Handle(string message, LogSeverity severity) {
+            if (Handling) {
+                Add(message, severity);
             }
         }
     }

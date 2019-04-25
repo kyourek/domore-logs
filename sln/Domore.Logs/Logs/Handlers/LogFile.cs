@@ -2,7 +2,7 @@
 using System.IO;
 
 namespace Domore.Logs.Handlers {
-    class LogFile : LogBackground {
+    class LogFile : LogQueue.Handler {
         string ValidName {
             get {
                 var name = (Name ?? "").Trim();
@@ -17,37 +17,18 @@ namespace Domore.Logs.Handlers {
             }
         }
 
-        protected override void ProtectedHandle(string message) {
-            var directory = (Directory ?? "").Trim();
-            if (directory == "") return;
+        FileInfo FileInfo {
+            get {
+                var directory = (Directory ?? "").Trim();
+                if (directory == "") return null;
 
-            var validName = (ValidName ?? "").Trim();
-            if (validName == "") return;
+                var validName = (ValidName ?? "").Trim();
+                if (validName == "") return null;
 
-            var open = default(Func<StreamWriter>);
-            var path = Path.Combine(directory, validName);
-            var file = new FileInfo(path);
-            if (file.Exists) {
-                var entryTime = DateTime.Now;
-                var lastWriteTime = file.LastWriteTime;
-                var eraseExisting = ClearInterval < (entryTime - lastWriteTime);
-                if (eraseExisting) {
-                    open = file.CreateText;
-                }
-                else {
-                    open = file.AppendText;
-                }
-            }
-            else {
-                var dir = new DirectoryInfo(directory);
-                if (dir.Exists == false) {
-                    dir.Create();
-                }
-                open = file.CreateText;
-            }
+                var path = Path.Combine(directory, validName);
+                var file = new FileInfo(path);
 
-            using (var writer = open()) {
-                writer.WriteLine(message);
+                return file;
             }
         }
 
@@ -61,6 +42,52 @@ namespace Domore.Logs.Handlers {
         public TimeSpan ClearInterval {
             get => _ClearInterval;
             set => Change(ref _ClearInterval, value, nameof(ClearInterval));
+        }
+
+        public string Read() {
+            var file = FileInfo;
+            if (file == null) return null;
+            if (file.Exists == false) return null;
+            try {
+                return File.ReadAllText(file.FullName);
+            }
+            catch (FileNotFoundException) {
+                return null;
+            }
+        }
+
+        public void Delete() {
+            var file = FileInfo;
+            if (file == null) return;
+            if (file.Exists == false) return;
+            file.Delete();
+        }
+
+        public override void HandleWork(string message, LogSeverity severity) {
+            var file = FileInfo;
+            if (file == null) return;
+
+            StreamWriter open() {
+                if (file.Exists) {
+                    var entryTime = DateTime.UtcNow;
+                    var lastWriteTime = file.LastWriteTimeUtc;
+                    var eraseExisting = ClearInterval < (entryTime - lastWriteTime);
+                    if (eraseExisting) {
+                        return file.CreateText();
+                    }
+                    return file.AppendText();
+                }
+
+                var dir = file.Directory;
+                if (dir.Exists == false) {
+                    dir.Create();
+                }
+                return file.CreateText();
+            }
+
+            using (var writer = open()) {
+                writer.WriteLine(message);
+            }
         }
     }
 }

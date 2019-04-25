@@ -16,6 +16,6 @@ namespace Domore.Logs {
         string Format { get; }
 
         [DispId(3)]
-        void Handle(string entry);
+        void Handle(string message, LogSeverity severity);
     }
 }
