@@ -1,0 +1,22 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
+  <metadata>
+    <id>Domore.Web</id>
+    <version>2.4.1</version>
+    <authors>Ken Yourek</authors>
+    <description>Domore offers easy control over paged results from IQueryable sources.</description>
+    <projectUrl>https://github.com/kyourek/Domore</projectUrl>
+    <licenseUrl>https://raw.githubusercontent.com/kyourek/Domore/master/LICENSE</licenseUrl>
+    <dependencies>
+      <dependency id="Domore" version="2.4.1" />
+    </dependencies>
+    <frameworkAssemblies>
+      <frameworkAssembly assemblyName="System" />
+      <frameworkAssembly assemblyName="System.Web" />
+    </frameworkAssemblies>
+  </metadata>
+  <files>
+    <file src="Domore.Web-net40/bin/Domore.Web.dll" target="lib/net40" />
+    <file src="Domore.Web-net45/bin/Domore.Web.dll" target="lib/net45" />
+  </files>
+</package>

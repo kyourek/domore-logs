@@ -1,0 +1,18 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
+  <metadata>
+    <id>Domore</id>
+    <version>2.4.1</version>
+    <authors>Ken Yourek</authors>
+    <description></description>
+    <projectUrl>https://github.com/kyourek/Domore.Logs</projectUrl>
+    <licenseUrl>https://raw.githubusercontent.com/kyourek/Domore/master/LICENSE</licenseUrl>
+    <dependencies></dependencies>
+    <frameworkAssemblies></frameworkAssemblies>
+  </metadata>
+  <files>
+    <file src="Domore-net40/bin/Domore.dll" target="lib/net40" />
+    <file src="Domore-net45/bin/Domore.dll" target="lib/net45" />
+    <file src="Domore-netstandard2.0/bin/netstandard2.0/Domore.dll" target="lib/netstandard2.0" />
+  </files>
+</package>
