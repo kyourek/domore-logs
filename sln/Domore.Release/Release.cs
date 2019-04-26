@@ -23,9 +23,8 @@ namespace Domore {
                 var actions = new ReleaseAction[] {
                     new Bump(),
                     new Build(),
-                    //new Pack(),
-                    //new Tag(),
-                    //new Push()
+                    new Tag(),
+                    new Push()
                 };
 
                 foreach (var action in actions) {
