@@ -1,4 +1,6 @@
-﻿using System.Diagnostics;
+﻿using System;
+using System.Diagnostics;
+using System.Linq;
 
 namespace Domore.Logs.Handlers {
     class LogEvent : LogQueue.Handler {
@@ -13,6 +15,21 @@ namespace Domore.Logs.Handlers {
                 DefaultMachineName = eventLog.MachineName;
                 DefaultSource = eventLog.Source;
             }
+        }
+
+        T Use<T>(Func<EventLog, T> action) {
+            if (null == action) throw new ArgumentNullException(nameof(action));
+            using (var eventLog = new EventLog(LogName, MachineName, Source)) {
+                return action(eventLog);
+            }
+        }
+
+        void Use(Action<EventLog> action) {
+            if (null == action) throw new ArgumentNullException(nameof(action));
+            Use(eventLog => {
+                action(eventLog);
+                return default(object);
+            });
         }
 
         string _LogName;
@@ -33,17 +50,27 @@ namespace Domore.Logs.Handlers {
             set => Change(ref _Source, value, nameof(Source));
         }
 
+        public string Read() {
+            return Use(eventLog => {
+                return eventLog.Entries.Cast<EventLogEntry>().Select(entry => entry.Message).Aggregate((s1, s2) => s1 + Environment.NewLine + s2);
+            });
+        }
+
         public override void HandleWork(string message, LogSeverity severity) {
-            using (var eventLog = new EventLog(LogName, MachineName, Source)) {
+            Use(eventLog => {
                 eventLog.WriteEntry(message, type:
                     severity <= LogSeverity.Info ? EventLogEntryType.Information :
                     severity <= LogSeverity.Warn ? EventLogEntryType.Warning :
                     EventLogEntryType.Error);
-            }
+            });
         }
 #else
+        public string Read() {
+            return null; 
+        }
+
         public override void HandleWork(string message, LogSeverity severity) {
-        }        
+        }
 #endif
     }
 }
