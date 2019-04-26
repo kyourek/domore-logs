@@ -1,9 +1,14 @@
 ﻿namespace Domore.ReleaseActions {
     class Build : ReleaseAction {
         public override void Work() {
-            var solutionPath = $"\"{SolutionFilePath}\"";
-            Process("nuget", "restore", solutionPath);
-            Process("MSBuild", "/t:Clean", "/t:Rebuild", "/p:Configuration=Release", solutionPath);
+            Process("MSBuild", 
+                "-restore", 
+                "-t:Clean", 
+                "-t:Rebuild",
+                "-t:pack",
+                "-p:Configuration=Release",
+                "-p:IncludeSymbols=true",
+                $"\"{SolutionFilePath}\"");
         }
     }
 }

@@ -23,9 +23,9 @@ namespace Domore {
                 var actions = new ReleaseAction[] {
                     new Bump(),
                     new Build(),
-                    new Pack(),
-                    new Tag(),
-                    new Push()
+                    //new Pack(),
+                    //new Tag(),
+                    //new Push()
                 };
 
                 foreach (var action in actions) {
@@ -46,6 +46,7 @@ namespace Domore {
             }
 
             if (arg("Debug") == "yes") {
+                Console.WriteLine("[Enter] to exit.");
                 Console.ReadLine();
             }
         }

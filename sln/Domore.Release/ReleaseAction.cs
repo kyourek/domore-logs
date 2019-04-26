@@ -38,7 +38,7 @@ namespace Domore {
             get {
                 if (_SolutionDirectory == null) {
                     _SolutionDirectory = Path.GetDirectoryName(new Uri(Assembly.GetExecutingAssembly().CodeBase).LocalPath);
-                    while (Directory.GetFiles(_SolutionDirectory).Any(file => Path.GetFileName(file) == "domore-logs.sln") == false) {
+                    while (Directory.GetFiles(_SolutionDirectory).Any(file => Path.GetFileName(file) == SolutionFileName) == false) {
                         _SolutionDirectory = Path.GetDirectoryName(_SolutionDirectory);
                     }
                 }
@@ -48,7 +48,9 @@ namespace Domore {
         }
         string _SolutionDirectory;
 
-        public string SolutionFilePath => Path.Combine(SolutionDirectory, "domore-logs.sln");
+        public string SolutionFileName { get; set; }
+        public string SolutionFilePath => Path.Combine(SolutionDirectory, SolutionFileName);
+        public string PropertiesFilePath => Path.Combine(SolutionDirectory, "Directory.Build.props");
 
         public string Stage { get; set; }
         public Action<string> Log { get; set; }

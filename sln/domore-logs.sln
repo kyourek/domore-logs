@@ -19,12 +19,11 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Domore.Logs.Test", "Domore.
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "release", "release", "{43178BAC-0253-479B-9E56-640E787554FB}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Domore.Release", "Domore.Release\Domore.Release.csproj", "{77FDE8EE-77E3-4C95-8A2D-BABE53EC7B98}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Domore.Release", "Domore.Release\Domore.Release.csproj", "{77FDE8EE-77E3-4C95-8A2D-BABE53EC7B98}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "nuget", "nuget", "{DF52445A-1142-4EA8-9D2B-24A2D3EE3B99}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "properties", "properties", "{F4F6A647-BF8E-4E66-A89F-E72F6431F26C}"
 	ProjectSection(SolutionItems) = preProject
-		Domore.Logs.Configuration.nuspec = Domore.Logs.Configuration.nuspec
-		Domore.Logs.nuspec = Domore.Logs.nuspec
+		Directory.Build.props = Directory.Build.props
 	EndProjectSection
 EndProject
 Global

@@ -1,0 +1,21 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project>
+  <PropertyGroup>
+    <Authors>Ken Yourek</Authors>
+    <Copyright>Copyright © Ken Yourek 2019</Copyright>
+    <VersionPrefix>1.0.1</VersionPrefix>
+    <VersionSuffix>alpha.3</VersionSuffix>
+    <AssemblyVersion>1.0.1</AssemblyVersion>
+    <InformationalVersion>1.0.1-alpha.3</InformationalVersion>
+    <FileVersion>1.0.1.3</FileVersion>
+    <PackageVersion>1.0.1-alpha.3</PackageVersion>
+    <PackageProjectUrl>https://github.com/kyourek/Domore.Logs</PackageProjectUrl>
+    <RepositoryType>git</RepositoryType>
+    <RepositoryUrl>https://github.com/kyourek/Domore.Logs.git</RepositoryUrl>
+    <RepositoryBranch></RepositoryBranch>
+    <RepositoryCommit></RepositoryCommit>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
+    <PackageTags>log;logs;logger;logging</PackageTags>
+  </PropertyGroup>
+</Project>
