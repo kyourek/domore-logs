@@ -3,8 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 
 namespace Domore.Logs {
-    using Handlers;
-
     class LogManager : IDisposable {
         readonly object Locker = new object();
         readonly ICollection<WeakReference> LoggerReferences = new List<WeakReference>();
@@ -23,6 +21,11 @@ namespace Domore.Logs {
                 }
                 return _Queue;
             }
+        }
+
+        LogHandler.Factory _HandlerFactory;
+        LogHandler.Factory HandlerFactory {
+            get => _HandlerFactory ?? (_HandlerFactory = new LogHandler.Factory());
         }
 
         void AddHandlers(Logger logger) {
@@ -53,15 +56,17 @@ namespace Domore.Logs {
         }
 
         Logger CreateLogger(string name, Type type, object owner) {
-            var logger = new Logger(name, type, owner);
-            var logFile = new LogFile {
-                Name = logger.Name + ".log",
-                Queue = Queue };
-
             var config = Configuration;
-            config.Configure(logFile);
-            config.Configure(logFile, logFile.Name);
-            logger.AddHandler(logFile);
+            var logger = new Logger(name, type, owner);
+            foreach (var item in Handler) {
+                var handler = HandlerFactory.CreateHandler(item.Value, $"{logger.Name}.{item.Key}");
+                if (handler is LogQueue.Handler handlerInQueue) {
+                    handlerInQueue.Queue = Queue;
+                }
+                config.Configure(handler);
+                config.Configure(handler, handler.Name);
+                logger.AddHandler(handler);
+            }
 
             lock (Locker) {
                 LoggerReferences.Add(new WeakReference(logger));
@@ -81,6 +86,12 @@ namespace Domore.Logs {
                     }
                 }
             }
+        }
+
+        IDictionary<string, string> _Handler;
+        public IDictionary<string, string> Handler {
+            get => _Handler ?? (_Handler = new Dictionary<string, string>());
+            set => _Handler = value;
         }
 
         ILogConfiguration _Configuration;
@@ -128,6 +139,14 @@ namespace Domore.Logs {
 
         ~LogManager() {
             Dispose(false);
+        }
+
+        class HandlerCollection {
+            readonly IDictionary<string, string> Dictionary = new Dictionary<string, string>();
+
+            public string this[string key] {
+                set => Dictionary[key] = value;
+            }
         }
     }
 }

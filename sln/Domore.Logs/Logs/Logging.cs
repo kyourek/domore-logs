@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Runtime.InteropServices;
 
 namespace Domore.Logs {
@@ -10,7 +11,7 @@ namespace Domore.Logs {
         static LogManager Manager {
             get {
                 if (_Manager == null) {
-                    _Manager = new LogManager { Configuration = Configuration };
+                    _Manager = new LogManager { Configuration = Configuration, Handler = Handler };
                     Configuration.Configure(_Manager);
                     Configuration.Configure(_Manager, "Logging");
                 }
@@ -21,6 +22,11 @@ namespace Domore.Logs {
 
         static ILog For(string name, Type type, object owner) => 
             Manager.GetLog(name, type, owner);
+
+        static IDictionary<string, string> _Handler;
+        internal static IDictionary<string, string> Handler {
+            get => _Handler ?? (_Handler = new Dictionary<string, string>());
+        }
 
         static ILogConfiguration _Configuration;
         public static ILogConfiguration Configuration {

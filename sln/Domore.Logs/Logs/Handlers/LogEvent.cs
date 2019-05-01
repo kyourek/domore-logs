@@ -3,8 +3,8 @@ using System.Diagnostics;
 using System.Linq;
 
 namespace Domore.Logs.Handlers {
+#if NETFRAMEWORK
     class LogEvent : LogQueue.Handler {
-#if NET40 || NET45
         static readonly string DefaultLogName;
         static readonly string DefaultMachineName;
         static readonly string DefaultSource;
@@ -64,13 +64,6 @@ namespace Domore.Logs.Handlers {
                     EventLogEntryType.Error);
             });
         }
-#else
-        public string Read() {
-            return null; 
-        }
-
-        public override void HandleWork(string message, LogSeverity severity) {
-        }
-#endif
     }
+#endif
 }

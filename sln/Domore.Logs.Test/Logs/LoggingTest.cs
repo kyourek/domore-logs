@@ -23,13 +23,15 @@ namespace Domore.Logs {
 
         [SetUp]
         public void SetUp() {
+            Logging.Reset();
+            Logging.Handler.Clear();
+            Logging.Handler["log"] = "logfile";
             Logging.Configuration = null;
         }
 
         [TearDown]
         public void TearDown() {
             Logging.Complete();
-            Logging.Reset();
         }
 
         [Test]

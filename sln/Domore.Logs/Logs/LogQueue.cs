@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.Threading;
 
 namespace Domore.Logs {
@@ -32,6 +33,11 @@ namespace Domore.Logs {
                 }
                 catch (Exception ex) {
                     handler.Error = ex;
+                    try { Console.WriteLine(ex); } catch { }
+                    try { Trace.WriteLine(ex); } catch { }
+#if NETFRAMEWORK
+                    try { EventLog.WriteEntry(".NET Runtime", ex.ToString(), EventLogEntryType.Error, 1000); } catch { }
+#endif
                 }
             }
         }
@@ -118,14 +124,17 @@ namespace Domore.Logs {
         }
 
         public abstract class Handler : LogHandler {
-            public Exception Error { get; set; }
             public LogQueue Queue { get; set; }
+            public Exception Error { get; set; }
 
             public sealed override void Handle(string message, LogSeverity severity) {
                 var queue = Queue;
-                if (queue == null) throw new InvalidOperationException("Queue is null.");
-
-                queue.Add(new Item(this, message, severity));
+                if (queue != null) {
+                    queue.Add(new Item(this, message, severity));
+                }
+                else {
+                    HandleWork(message, severity);
+                }
             }
 
             public abstract void HandleWork(string message, LogSeverity severity);

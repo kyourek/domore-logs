@@ -24,7 +24,7 @@ namespace Domore.Logs {
             }
         }
 
-        private void Entry(LogEntry entry) {
+        void Entry(LogEntry entry) {
             if (null == entry) throw new ArgumentNullException(nameof(entry));
 
             var severity = entry.Severity;
