@@ -7,7 +7,7 @@
     <VersionSuffix>alpha.5</VersionSuffix>
     <AssemblyVersion>1.0.1</AssemblyVersion>
     <InformationalVersion>1.0.1-alpha.5</InformationalVersion>
-    <FileVersion>1.0.1.5</FileVersion>
+    <FileVersion>1.0.2.5</FileVersion>
     <PackageVersion>1.0.1-alpha.5</PackageVersion>
     <PackageProjectUrl>https://github.com/kyourek/Domore.Logs</PackageProjectUrl>
     <RepositoryType>git</RepositoryType>

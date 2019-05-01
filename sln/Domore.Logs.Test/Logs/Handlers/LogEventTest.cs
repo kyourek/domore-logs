@@ -21,16 +21,6 @@ namespace Domore.Logs.Handlers {
         public void TearDown() {
             Queue.Dispose();
         }
-
-        [Test]
-        public void temp() {
-            //Subject.LogName = "Application";
-            //Subject.Handle("The log entry!", LogSeverity.Info);
-            //Subject.Queue.Complete();
-            //var actual = Subject.Read();
-            //var expected = "The log entry!" + Environment.NewLine;
-            //Assert.AreEqual(expected, actual);
-        }
     }
 #endif
 }
