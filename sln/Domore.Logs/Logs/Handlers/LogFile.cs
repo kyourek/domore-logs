@@ -24,8 +24,8 @@ namespace Domore.Logs.Handlers {
 
                 var validName = (ValidName ?? "").Trim();
                 if (validName == "") return null;
-
-                var path = Path.Combine(directory, validName);
+                
+                var path = Path.Combine(Environment.ExpandEnvironmentVariables(directory), validName);
                 var file = new FileInfo(path);
 
                 return file;
