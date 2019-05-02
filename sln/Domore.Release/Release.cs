@@ -2,7 +2,6 @@
 using System.Linq;
 
 namespace Domore {
-    using Configuration;
     using ReleaseActions;
 
     class Release {
@@ -28,8 +27,8 @@ namespace Domore {
                 };
 
                 foreach (var action in actions) {
-                    ConfigurationDefault.Configure(action, "ReleaseAction");
-                    ConfigurationDefault.Configure(action);
+                    Config.Configure(action, "ReleaseAction");
+                    Config.Configure(action);
 
                     if (arg(action.GetType().Name) != "no") {
                         action.Context = context;
