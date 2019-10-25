@@ -1,12 +1,12 @@
-﻿using System;
-using NUnit.Framework;
+﻿using NUnit.Framework;
+using System;
 
 namespace Domore.Logs.Handlers {
 #if NETFRAMEWORK
     [TestFixture]
     public class LogEventTest {
-        LogEvent Subject;
-        LogQueue Queue;
+        private LogEvent Subject;
+        private LogQueue Queue;
 
         [SetUp]
         public void SetUp() {

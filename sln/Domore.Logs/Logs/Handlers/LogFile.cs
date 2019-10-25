@@ -2,8 +2,8 @@
 using System.IO;
 
 namespace Domore.Logs.Handlers {
-    class LogFile : LogQueue.Handler {
-        string ValidName {
+    internal class LogFile : LogQueue.Handler {
+        private string ValidName {
             get {
                 var name = (Name ?? "").Trim();
                 if (name == "") return null;
@@ -24,7 +24,7 @@ namespace Domore.Logs.Handlers {
 
                 var validName = (ValidName ?? "").Trim();
                 if (validName == "") return null;
-                
+
                 var path = Path.Combine(Environment.ExpandEnvironmentVariables(directory), validName);
                 var file = new FileInfo(path);
 
@@ -32,17 +32,17 @@ namespace Domore.Logs.Handlers {
             }
         }
 
-        string _Directory;
         public string Directory {
             get => _Directory;
             set => Change(ref _Directory, value, nameof(Directory));
         }
+        private string _Directory;
 
-        TimeSpan _ClearInterval = TimeSpan.FromDays(7);
         public TimeSpan ClearInterval {
             get => _ClearInterval;
             set => Change(ref _ClearInterval, value, nameof(ClearInterval));
         }
+        private TimeSpan _ClearInterval = TimeSpan.FromDays(7);
 
         public string Read() {
             var file = FileInfo;

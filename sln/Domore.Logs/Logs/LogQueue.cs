@@ -4,12 +4,12 @@ using System.Diagnostics;
 using System.Threading;
 
 namespace Domore.Logs {
-    class LogQueue : IDisposable {
-        Thread Thread;
-        readonly object ThreadLocker = new object();
-        readonly BlockingCollection<Item> Collection = new BlockingCollection<Item>();
+    internal class LogQueue : IDisposable {
+        private Thread Thread;
+        private readonly object ThreadLocker = new object();
+        private readonly BlockingCollection<Item> Collection = new BlockingCollection<Item>();
 
-        void ThreadStart() {
+        private void ThreadStart() {
             for (; ; ) {
                 var item = default(Item);
                 try {
@@ -42,7 +42,7 @@ namespace Domore.Logs {
             }
         }
 
-        bool Complete(TimeSpan? timeout) {
+        private bool Complete(TimeSpan? timeout) {
             Collection.CompleteAdding();
 
             if (Thread != null) {
@@ -94,13 +94,8 @@ namespace Domore.Logs {
             }
         }
 
-        public void Complete() {
-            Complete(null);
-        }
-
-        public bool Complete(TimeSpan timeout) {
-            return Complete(new TimeSpan?(timeout));
-        }
+        public void Complete() => Complete(null);
+        public bool Complete(TimeSpan timeout) => Complete(new TimeSpan?(timeout));
 
         public void Dispose() {
             Dispose(true);

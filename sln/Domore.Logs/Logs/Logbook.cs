@@ -4,26 +4,23 @@ using System.Collections.Specialized;
 
 namespace Domore.Logs {
     public class Logbook : LogHandler {
-        int TruncateIndex = 0;
-        readonly object Locker = new object();
+        private int TruncateIndex = 0;
+        private readonly object Locker = new object();
+        private readonly ObservableCollection<LogbookEntry> EntryCollection;
 
-        ObservableCollection<LogbookEntry> EntryCollection { get; }
-
-        void EntryCollection_CollectionChanged(object sender, NotifyCollectionChangedEventArgs e) {
+        private void EntryCollection_CollectionChanged(object sender, NotifyCollectionChangedEventArgs e) =>
             EntriesChanged?.Invoke(this, e);
-        }
 
         public event NotifyCollectionChangedEventHandler EntriesChanged;
 
         public ReadOnlyObservableCollection<LogbookEntry> Entries { get; }
 
-        bool _Handling = true;
         public bool Handling {
             get => _Handling;
             set => Change(ref _Handling, value, nameof(Handling));
         }
+        private bool _Handling = true;
 
-        int _DataLimit;
         public int DataLimit {
             get => _DataLimit;
             set {
@@ -36,8 +33,8 @@ namespace Domore.Logs {
                 }
             }
         }
+        private int _DataLimit;
 
-        int _EntryLimit;
         public int EntryLimit {
             get => _EntryLimit;
             set {
@@ -50,18 +47,19 @@ namespace Domore.Logs {
                 }
             }
         }
+        private int _EntryLimit;
 
-        int _TruncateDelay = 10;
         public int TruncateDelay {
             get => _TruncateDelay;
             set => Change(ref _TruncateDelay, value, nameof(TruncateDelay));
         }
+        private int _TruncateDelay = 10;
 
-        string _Data;
         public string Data {
             get => _Data ?? (_Data = "");
             private set => Change(ref _Data, value, nameof(Data));
         }
+        private string _Data;
 
         public Logbook() {
             EntryCollection = new ObservableCollection<LogbookEntry>();

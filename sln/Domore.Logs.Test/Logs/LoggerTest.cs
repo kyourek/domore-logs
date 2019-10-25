@@ -3,19 +3,18 @@ using System.Collections.Generic;
 using System.Linq;
 
 namespace Domore.Logs {
-
     [TestFixture]
     public class LoggerTest {
-        Logger Subject;
+        private Logger Subject;
 
-        class LogHandler : ILogHandler {
+        private class LogHandler : ILogHandler {
             public LogSeverity Severity { get; set; }
             public string Format { get; set; }
             public IList<string> Entries { get; } = new List<string>();
             public void Handle(string message, LogSeverity severity) => Entries.Add(message);
         }
 
-        void SetSeverity(LogSeverity value) {
+        private void SetSeverity(LogSeverity value) {
             var handler = new LogHandler { Severity = value };
             Subject.AddHandler(handler);
         }

@@ -7,9 +7,9 @@ namespace Domore.Logs.Handlers {
 
     [TestFixture]
     public class LogFileTest {
-        LogFile Subject;
-        LogQueue Queue;
-        DirectoryInfo TempDir;
+        private LogFile Subject;
+        private LogQueue Queue;
+        private DirectoryInfo TempDir;
 
         [SetUp]
         public void SetUp() {
@@ -18,7 +18,8 @@ namespace Domore.Logs.Handlers {
             Subject = new LogFile {
                 Directory = TempDir.FullName,
                 Name = Guid.NewGuid().ToString("N"),
-                Queue = Queue };
+                Queue = Queue
+            };
         }
 
         [TearDown]

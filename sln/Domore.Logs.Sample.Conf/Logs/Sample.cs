@@ -3,8 +3,8 @@
 namespace Domore.Logs.Sample {
     using Conf;
 
-    class Program {
-        static void Main(string[] args) {
+    internal class Program {
+        private static void Main(string[] args) {
             Conf.Container.ContentsProvider = new AppSettingsProvider();
             Conf.Container.ConfigureLogging();
 
@@ -16,7 +16,7 @@ namespace Domore.Logs.Sample {
         }
     }
 
-    class Sample {
+    internal class Sample {
         public void Run() {
             var log = Logging.For(this);
             log.Debug("Debug message written to file");

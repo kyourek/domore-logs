@@ -4,10 +4,10 @@ using System.Linq;
 
 namespace Domore.Logs.Handlers {
 #if NETFRAMEWORK
-    class LogEvent : LogQueue.Handler {
-        static readonly string DefaultLogName;
-        static readonly string DefaultMachineName;
-        static readonly string DefaultSource;
+    internal class LogEvent : LogQueue.Handler {
+        private static readonly string DefaultLogName;
+        private static readonly string DefaultMachineName;
+        private static readonly string DefaultSource;
 
         static LogEvent() {
             using (var eventLog = new EventLog()) {
@@ -17,14 +17,14 @@ namespace Domore.Logs.Handlers {
             }
         }
 
-        T Use<T>(Func<EventLog, T> action) {
+        private T Use<T>(Func<EventLog, T> action) {
             if (null == action) throw new ArgumentNullException(nameof(action));
             using (var eventLog = new EventLog(LogName, MachineName, Source)) {
                 return action(eventLog);
             }
         }
 
-        void Use(Action<EventLog> action) {
+        private void Use(Action<EventLog> action) {
             if (null == action) throw new ArgumentNullException(nameof(action));
             Use(eventLog => {
                 action(eventLog);
@@ -32,38 +32,35 @@ namespace Domore.Logs.Handlers {
             });
         }
 
-        string _LogName;
         public string LogName {
             get => _LogName ?? (_LogName = DefaultLogName);
             set => Change(ref _LogName, value, nameof(LogName));
         }
+        private string _LogName;
 
-        string _MachineName;
         public string MachineName {
             get => _MachineName ?? (_MachineName = DefaultMachineName);
             set => Change(ref _MachineName, value, nameof(MachineName));
         }
+        private string _MachineName;
 
-        string _Source;
         public string Source {
             get => _Source ?? (_Source = DefaultSource);
             set => Change(ref _Source, value, nameof(Source));
         }
+        private string _Source;
 
-        public string Read() {
-            return Use(eventLog => {
-                return eventLog.Entries.Cast<EventLogEntry>().Select(entry => entry.Message).Aggregate((s1, s2) => s1 + Environment.NewLine + s2);
-            });
-        }
+        public string Read() =>
+            Use(eventLog => eventLog.Entries
+                .Cast<EventLogEntry>()
+                .Select(entry => entry.Message)
+                .Aggregate((s1, s2) => s1 + Environment.NewLine + s2));
 
-        public override void HandleWork(string message, LogSeverity severity) {
-            Use(eventLog => {
-                eventLog.WriteEntry(message, type:
-                    severity <= LogSeverity.Info ? EventLogEntryType.Information :
-                    severity <= LogSeverity.Warn ? EventLogEntryType.Warning :
-                    EventLogEntryType.Error);
-            });
-        }
+        public override void HandleWork(string message, LogSeverity severity) =>
+            Use(eventLog => eventLog.WriteEntry(message, type:
+                severity <= LogSeverity.Info ? EventLogEntryType.Information :
+                severity <= LogSeverity.Warn ? EventLogEntryType.Warning :
+                EventLogEntryType.Error));
     }
 #endif
 }

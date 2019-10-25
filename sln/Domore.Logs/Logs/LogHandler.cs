@@ -6,36 +6,36 @@ namespace Domore.Logs {
     using ComponentModel;
 
     public abstract class LogHandler : NotifyPropertyChangedImplementation, ILogHandler {
-        LogSeverity _Severity = LogSeverity.None;
         public LogSeverity Severity {
             get => _Severity;
             set => Change(ref _Severity, value, nameof(Severity));
         }
+        private LogSeverity _Severity = LogSeverity.None;
 
-        string _Name;
         public string Name {
             get => _Name;
-            internal
-            set => Change(ref _Name, value, nameof(Name));
+            internal set => Change(ref _Name, value, nameof(Name));
         }
+        private string _Name;
 
-        string _Format;
         public string Format {
             get => _Format;
             set => Change(ref _Format, value, nameof(Format));
         }
+        private string _Format;
 
         public abstract void Handle(string message, LogSeverity severity);
 
         internal class Factory {
-            IList<Type> _HandlerTypes;
-            IList<Type> HandlerTypes {
-                get => _HandlerTypes ?? (_HandlerTypes = typeof(LogHandler).Assembly.GetTypes()
+            private IList<Type> HandlerTypes =>
+                _HandlerTypes ?? (
+                _HandlerTypes = typeof(LogHandler).Assembly
+                    .GetTypes()
                     .Where(t => typeof(LogHandler).IsAssignableFrom(t) && !t.IsAbstract)
                     .ToList());
-            }
+            private IList<Type> _HandlerTypes;
 
-            LogHandler CreateHandler(string kind) {
+            private LogHandler CreateHandler(string kind) {
                 if (null == kind) throw new ArgumentNullException(nameof(kind));
 
                 string u(string s) => string.Join("", s.Trim().ToUpperInvariant().Split());

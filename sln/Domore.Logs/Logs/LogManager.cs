@@ -3,14 +3,13 @@ using System.Collections.Generic;
 using System.Linq;
 
 namespace Domore.Logs {
-    class LogManager : IDisposable {
-        readonly object Locker = new object();
-        readonly ICollection<WeakReference> LoggerReferences = new List<WeakReference>();
-        readonly ICollection<WeakReference> HandlerReferences = new List<WeakReference>();
-        readonly IDictionary<WeakReference, object[]> HandlerLogs = new Dictionary<WeakReference, object[]>();
+    internal class LogManager : IDisposable {
+        private readonly object Locker = new object();
+        private readonly ICollection<WeakReference> LoggerReferences = new List<WeakReference>();
+        private readonly ICollection<WeakReference> HandlerReferences = new List<WeakReference>();
+        private readonly IDictionary<WeakReference, object[]> HandlerLogs = new Dictionary<WeakReference, object[]>();
 
-        LogQueue _Queue;
-        LogQueue Queue {
+        private LogQueue Queue {
             get {
                 if (_Queue == null) {
                     lock (Locker) {
@@ -22,13 +21,14 @@ namespace Domore.Logs {
                 return _Queue;
             }
         }
+        private LogQueue _Queue;
 
-        LogHandler.Factory _HandlerFactory;
-        LogHandler.Factory HandlerFactory {
-            get => _HandlerFactory ?? (_HandlerFactory = new LogHandler.Factory());
-        }
+        private LogHandler.Factory HandlerFactory =>
+            _HandlerFactory ?? (
+            _HandlerFactory = new LogHandler.Factory());
+        private LogHandler.Factory _HandlerFactory;
 
-        void AddHandlers(Logger logger) {
+        private void AddHandlers(Logger logger) {
             if (null == logger) throw new ArgumentNullException(nameof(logger));
             var references = HandlerReferences.ToList();
             foreach (var reference in references) {
@@ -42,7 +42,8 @@ namespace Domore.Logs {
                         .Select(log => new {
                             Name = log as string,
                             Type = log as Type,
-                            Owner = log as object })
+                            Owner = log as object
+                        })
                         .Any(log =>
                             (log.Name != null && log.Name.Equals(logger.Name)) ||
                             (log.Type != null && log.Type.IsAssignableFrom(logger.Type)) ||
@@ -55,7 +56,7 @@ namespace Domore.Logs {
             }
         }
 
-        Logger CreateLogger(string name, Type type, object owner) {
+        private Logger CreateLogger(string name, Type type, object owner) {
             var config = Configuration;
             var logger = new Logger(name, type, owner);
             foreach (var item in Handler) {
@@ -88,23 +89,23 @@ namespace Domore.Logs {
             }
         }
 
-        IDictionary<string, string> _Handler;
         public IDictionary<string, string> Handler {
             get => _Handler ?? (_Handler = new Dictionary<string, string>());
             set => _Handler = value;
         }
+        private IDictionary<string, string> _Handler;
 
-        ILogConfiguration _Configuration;
         public ILogConfiguration Configuration {
             get => _Configuration ?? (_Configuration = new LogConfiguration());
             set => _Configuration = value;
         }
+        private ILogConfiguration _Configuration;
 
-        TimeSpan _CompleteTimeout = TimeSpan.FromSeconds(5);
         public TimeSpan CompleteTimeout {
             get => _CompleteTimeout;
             set => _CompleteTimeout = value;
         }
+        private TimeSpan _CompleteTimeout = TimeSpan.FromSeconds(5);
 
         public ILog GetLog(string name, Type type, object owner) =>
             CreateLogger(name, type, owner);
@@ -141,8 +142,8 @@ namespace Domore.Logs {
             Dispose(false);
         }
 
-        class HandlerCollection {
-            readonly IDictionary<string, string> Dictionary = new Dictionary<string, string>();
+        private class HandlerCollection {
+            private readonly IDictionary<string, string> Dictionary = new Dictionary<string, string>();
 
             public string this[string key] {
                 set => Dictionary[key] = value;

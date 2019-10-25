@@ -17,10 +17,10 @@ namespace Domore.Logs {
         public object[] Data { get; }
         public string[] DataStrings { get; }
 
-        string _DataString;
-        public string DataString {
-            get => _DataString ?? (_DataString = string.Join(Environment.NewLine, DataStrings));
-        }
+        public string DataString =>
+            _DataString ?? (
+            _DataString = string.Join(Environment.NewLine, DataStrings));
+        private string _DataString;
 
         public LogEntry(DateTime time, LogSeverity severity, string logName, object[] data) {
             LogName = logName;
@@ -45,7 +45,7 @@ namespace Domore.Logs {
                 .Replace("Time", "1")
                 .Replace("Severity", "2")
                 .Replace("Data", "3"));
-            
+
             return string.Format(format,
                 LogName,
                 Time,
@@ -53,9 +53,8 @@ namespace Domore.Logs {
                 DataString);
         }
 
-        public override string ToString() {
-            return ToString(null);
-        }
+        public override string ToString() =>
+            ToString(null);
 
         public static LogEntry Create(string message, Exception error = null, LogSeverity? severity = null) {
             if (severity == null) {

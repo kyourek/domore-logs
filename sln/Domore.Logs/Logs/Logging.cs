@@ -7,8 +7,7 @@ namespace Domore.Logs {
     [ComVisible(true)]
     [ClassInterface(ClassInterfaceType.None)]
     public class Logging : ILogging {
-        static LogManager _Manager;
-        static LogManager Manager {
+        private static LogManager Manager {
             get {
                 if (_Manager == null) {
                     _Manager = new LogManager { Configuration = Configuration, Handler = Handler };
@@ -19,27 +18,28 @@ namespace Domore.Logs {
             }
             set => _Manager = value;
         }
+        private static LogManager _Manager;
 
-        static ILog For(string name, Type type, object owner) => 
+        private static ILog For(string name, Type type, object owner) =>
             Manager.GetLog(name, type, owner);
 
-        static IDictionary<string, string> _Handler;
-        internal static IDictionary<string, string> Handler {
-            get => _Handler ?? (_Handler = new Dictionary<string, string>());
-        }
+        internal static IDictionary<string, string> Handler =>
+            _Handler ?? (
+            _Handler = new Dictionary<string, string>());
+        private static IDictionary<string, string> _Handler;
 
-        static ILogConfiguration _Configuration;
         public static ILogConfiguration Configuration {
             get => _Configuration ?? (_Configuration = new LogConfiguration());
             set => _Configuration = value;
         }
+        private static ILogConfiguration _Configuration;
 
         public static TimeSpan CompleteTimeout {
             get => Manager.CompleteTimeout;
             set => Manager.CompleteTimeout = value;
         }
 
-        public static void Add(ILogHandler handler, params object[] logs) => 
+        public static void Add(ILogHandler handler, params object[] logs) =>
             Manager.AddHandler(handler, logs);
 
         public static ILog For(Type type, string name = null) {

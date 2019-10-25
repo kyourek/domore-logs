@@ -1,10 +1,10 @@
 ﻿using System;
 
 namespace Domore.Logs.Sample {
-    class Program {
-        static readonly ConsoleHandler CalculatorLog = new ConsoleHandler();
+    internal class Program {
+        private static readonly ConsoleHandler CalculatorLog = new ConsoleHandler();
 
-        static void Main(string[] args) {
+        private static void Main(string[] args) {
             Logging.Add(CalculatorLog, typeof(Calculator));
 
             new Sample().Run();
@@ -15,7 +15,7 @@ namespace Domore.Logs.Sample {
         }
     }
 
-    class ConsoleHandler : ILogHandler {
+    internal class ConsoleHandler : ILogHandler {
         public LogSeverity Severity =>
             LogSeverity.Debug;
 
@@ -26,14 +26,14 @@ namespace Domore.Logs.Sample {
             Console.WriteLine(message);
     }
 
-    class Sample {
+    internal class Sample {
         public void Run() {
             new Calculator().Add(1, 2);
         }
     }
 
-    class Calculator {
-        readonly ILog Log = Logging.For(typeof(Calculator));
+    internal class Calculator {
+        private readonly ILog Log = Logging.For(typeof(Calculator));
 
         public void Add(int one, int two) {
             Log.Debug("Adding", one, two);

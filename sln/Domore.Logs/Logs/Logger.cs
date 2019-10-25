@@ -6,12 +6,11 @@ using System.Linq;
 namespace Domore.Logs {
     using ComponentModel;
 
-    class Logger : NotifyPropertyChangedImplementation, ILog {
-        readonly object Locker = new object();
+    internal class Logger : NotifyPropertyChangedImplementation, ILog {
+        private readonly object Locker = new object();
+        private readonly ISet<ILogHandler> Handlers = new HashSet<ILogHandler>();
 
-        ISet<ILogHandler> Handlers { get; } = new HashSet<ILogHandler>();
-
-        void Handler_PropertyChanged(object sender, PropertyChangedEventArgs e) {
+        private void Handler_PropertyChanged(object sender, PropertyChangedEventArgs e) {
             if (e != null) {
                 if (e.PropertyName == nameof(ILogHandler.Severity)) {
                     if (sender is ILogHandler handler) {
@@ -24,7 +23,7 @@ namespace Domore.Logs {
             }
         }
 
-        void Entry(LogEntry entry) {
+        private void Entry(LogEntry entry) {
             if (null == entry) throw new ArgumentNullException(nameof(entry));
 
             var severity = entry.Severity;
@@ -48,17 +47,20 @@ namespace Domore.Logs {
         public Type Type { get; }
         public object Owner { get; }
 
-        LogSeverity _Severity = LogSeverity.None;
         public LogSeverity Severity {
             get => _Severity;
             private set => Change(ref _Severity, value, nameof(Severity));
         }
+        private LogSeverity _Severity = LogSeverity.None;
 
-        public bool Enabled(LogSeverity severity) => severity == LogSeverity.None ? false : (severity >= Severity);
+        public bool Enabled(LogSeverity severity) =>
+            severity == LogSeverity.None
+                ? false
+                : (severity >= Severity);
 
         public bool AddHandler(ILogHandler handler) {
             if (null == handler) throw new ArgumentNullException(nameof(handler));
-            
+
             var added = default(bool);
             lock (Locker) {
                 added = Handlers.Add(handler);
@@ -92,8 +94,8 @@ namespace Domore.Logs {
                 var handlerSeverity = handler.Severity;
                 if (handlerSeverity == Severity) {
                     var handlers = GetHandlers();
-                    Severity = handlers.Any() 
-                        ? handlers.Min(h => h.Severity) 
+                    Severity = handlers.Any()
+                        ? handlers.Min(h => h.Severity)
                         : LogSeverity.None;
                 }
             }
@@ -113,15 +115,14 @@ namespace Domore.Logs {
             }
         }
 
-        public void Entry(LogSeverity severity, params object[] data) {
+        public void Entry(LogSeverity severity, params object[] data) =>
             Entry(new LogEntry(severity, Name, data));
-        }
 
-        public bool DebugEnabled { get => Enabled(LogSeverity.Debug); }
-        public bool InfoEnabled { get => Enabled(LogSeverity.Info); }
-        public bool WarnEnabled { get => Enabled(LogSeverity.Warn); }
-        public bool ErrorEnabled { get => Enabled(LogSeverity.Error); }
-        public bool CriticalEnabled { get => Enabled(LogSeverity.Critical); }
+        public bool DebugEnabled => Enabled(LogSeverity.Debug);
+        public bool InfoEnabled => Enabled(LogSeverity.Info);
+        public bool WarnEnabled => Enabled(LogSeverity.Warn);
+        public bool ErrorEnabled => Enabled(LogSeverity.Error);
+        public bool CriticalEnabled => Enabled(LogSeverity.Critical);
 
         public Logger(string name, Type type, object owner) {
             Name = name;

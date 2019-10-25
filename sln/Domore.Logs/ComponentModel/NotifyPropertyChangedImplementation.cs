@@ -12,17 +12,14 @@ namespace Domore.ComponentModel {
             return true;
         }
 
-        protected void NotifyPropertyChanged(string propertyName) {
+        protected void NotifyPropertyChanged(string propertyName) =>
             OnPropertyChanged(new PropertyChangedEventArgs(propertyName));
-        }
 
-        protected void NotifyPropertyChanged() {
+        protected void NotifyPropertyChanged() =>
             NotifyPropertyChanged(string.Empty);
-        }
 
-        protected virtual void OnPropertyChanged(PropertyChangedEventArgs e) {
+        protected virtual void OnPropertyChanged(PropertyChangedEventArgs e) =>
             PropertyChanged?.Invoke(this, e);
-        }
 
         public event PropertyChangedEventHandler PropertyChanged;
     }

@@ -1,7 +1,7 @@
 ﻿using System.IO;
 
 namespace Domore.Logs.Test.Helpers {
-    class Temp {
+    internal class Temp {
         public static DirectoryInfo Dir() {
             var tmp = Path.GetTempPath();
             var dir = Path.Combine(tmp, "Domore.Logs.Test");

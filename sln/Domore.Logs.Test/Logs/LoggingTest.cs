@@ -7,7 +7,7 @@ namespace Domore.Logs {
 
     [TestFixture]
     public class LoggingTest {
-        class LogFileConfiguration : ILogConfiguration {
+        private class LogFileConfiguration : ILogConfiguration {
             public LogSeverity Severity { get; set; }
             public string Name { get; set; }
             public TimeSpan ClearInterval { get; set; }

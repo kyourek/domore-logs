@@ -1,5 +1,5 @@
 ﻿namespace Domore.Logs {
-    class LogConfiguration : ILogConfiguration {
+    internal class LogConfiguration : ILogConfiguration {
         public void Configure(object obj, string key) {
         }
     }
