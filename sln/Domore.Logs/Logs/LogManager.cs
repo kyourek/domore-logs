@@ -9,18 +9,9 @@ namespace Domore.Logs {
         private readonly ICollection<WeakReference> HandlerReferences = new List<WeakReference>();
         private readonly IDictionary<WeakReference, object[]> HandlerLogs = new Dictionary<WeakReference, object[]>();
 
-        private LogQueue Queue {
-            get {
-                if (_Queue == null) {
-                    lock (Locker) {
-                        if (_Queue == null) {
-                            _Queue = new LogQueue();
-                        }
-                    }
-                }
-                return _Queue;
-            }
-        }
+        private LogQueue Queue =>
+            _Queue ?? (
+            _Queue = new LogQueue());
         private LogQueue _Queue;
 
         private LogHandler.Factory HandlerFactory =>
@@ -69,10 +60,8 @@ namespace Domore.Logs {
                 logger.AddHandler(handler);
             }
 
-            lock (Locker) {
-                LoggerReferences.Add(new WeakReference(logger));
-                AddHandlers(logger);
-            }
+            LoggerReferences.Add(new WeakReference(logger));
+            AddHandlers(logger);
 
             return logger;
         }
@@ -80,11 +69,7 @@ namespace Domore.Logs {
         protected virtual void Dispose(bool disposing) {
             if (disposing) {
                 if (_Queue != null) {
-                    lock (Locker) {
-                        if (_Queue != null) {
-                            _Queue.Dispose();
-                        }
-                    }
+                    _Queue.Dispose();
                 }
             }
         }
@@ -107,8 +92,11 @@ namespace Domore.Logs {
         }
         private TimeSpan _CompleteTimeout = TimeSpan.FromSeconds(5);
 
-        public ILog GetLog(string name, Type type, object owner) =>
-            CreateLogger(name, type, owner);
+        public ILog GetLog(string name, Type type, object owner) {
+            lock (Locker) {
+                return CreateLogger(name, type, owner);
+            }
+        }
 
         public void AddHandler(ILogHandler handler, params object[] logs) {
             lock (Locker) {
@@ -130,12 +118,18 @@ namespace Domore.Logs {
         }
 
         public void Complete() {
-            Queue.Complete(CompleteTimeout);
+            lock (Locker) {
+                if (_Queue != null) {
+                    _Queue.Complete(CompleteTimeout);
+                }
+            }
         }
 
         public void Dispose() {
-            Dispose(true);
-            GC.SuppressFinalize(this);
+            lock (Locker) {
+                Dispose(true);
+                GC.SuppressFinalize(this);
+            }
         }
 
         ~LogManager() {

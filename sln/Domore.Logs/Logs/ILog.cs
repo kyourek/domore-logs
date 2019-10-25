@@ -10,57 +10,39 @@ namespace Domore.Logs {
 #endif
     public interface ILog {
         [DispId(1)]
-        bool DebugEnabled { get; }
+        bool Entry(LogSeverity severity, string message);
 
         [DispId(2)]
-        bool InfoEnabled { get; }
+        bool Debug(string message);
 
         [DispId(3)]
-        bool WarnEnabled { get; }
+        bool Info(string message);
 
         [DispId(4)]
-        bool ErrorEnabled { get; }
+        bool Warn(string message);
 
         [DispId(5)]
-        bool CriticalEnabled { get; }
+        bool Error(string message);
 
         [DispId(6)]
-        bool Enabled(LogSeverity severity);
-
-        [DispId(7)]
-        void Entry(LogSeverity severity, string message);
-
-        [DispId(8)]
-        void Debug(string message);
-
-        [DispId(9)]
-        void Info(string message);
-
-        [DispId(10)]
-        void Warn(string message);
-
-        [DispId(11)]
-        void Error(string message);
-
-        [DispId(12)]
-        void Critical(string message);
+        bool Critical(string message);
 
         [ComVisible(false)]
-        void Entry(LogSeverity severity, params object[] data);
+        bool Entry(LogSeverity severity, params object[] data);
 
         [ComVisible(false)]
-        void Debug(params object[] data);
+        bool Debug(params object[] data);
 
         [ComVisible(false)]
-        void Info(params object[] data);
+        bool Info(params object[] data);
 
         [ComVisible(false)]
-        void Warn(params object[] data);
+        bool Warn(params object[] data);
 
         [ComVisible(false)]
-        void Error(params object[] data);
+        bool Error(params object[] data);
 
         [ComVisible(false)]
-        void Critical(params object[] data);
+        bool Critical(params object[] data);
     }
 }

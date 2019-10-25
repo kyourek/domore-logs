@@ -7,7 +7,6 @@ namespace Domore.Logs {
     using ComponentModel;
 
     internal class Logger : NotifyPropertyChangedImplementation, ILog {
-        private readonly object Locker = new object();
         private readonly ISet<ILogHandler> Handlers = new HashSet<ILogHandler>();
 
         private void Handler_PropertyChanged(object sender, PropertyChangedEventArgs e) {
@@ -23,10 +22,14 @@ namespace Domore.Logs {
             }
         }
 
-        private void Entry(LogEntry entry) {
-            if (null == entry) throw new ArgumentNullException(nameof(entry));
+        private bool Enter(LogSeverity severity, object[] data) {
+            var noData = data == null || data.Length == 0;
+            if (noData) return severity == LogSeverity.None 
+                ? false 
+                : (severity >= Severity);
 
-            var severity = entry.Severity;
+            var entry = new LogEntry(severity, Name, data);
+            var handled = false;
             var handlers = GetHandlers();
             var messages = new Dictionary<string, string>();
 
@@ -39,12 +42,15 @@ namespace Domore.Logs {
                     }
 
                     handler.Handle(message, severity);
+                    handled = true;
                 }
             }
+
+            return handled;
         }
 
-        public string Name { get; }
         public Type Type { get; }
+        public string Name { get; }
         public object Owner { get; }
 
         public LogSeverity Severity {
@@ -53,16 +59,11 @@ namespace Domore.Logs {
         }
         private LogSeverity _Severity = LogSeverity.None;
 
-        public bool Enabled(LogSeverity severity) =>
-            severity == LogSeverity.None
-                ? false
-                : (severity >= Severity);
-
         public bool AddHandler(ILogHandler handler) {
             if (null == handler) throw new ArgumentNullException(nameof(handler));
 
             var added = default(bool);
-            lock (Locker) {
+            lock (Handlers) {
                 added = Handlers.Add(handler);
             }
 
@@ -82,7 +83,7 @@ namespace Domore.Logs {
 
         public bool RemoveHandler(ILogHandler handler) {
             var removed = default(bool);
-            lock (Locker) {
+            lock (Handlers) {
                 removed = Handlers.Remove(handler);
             }
 
@@ -104,25 +105,16 @@ namespace Domore.Logs {
         }
 
         public bool ContainsHandler(ILogHandler handler) {
-            lock (Locker) {
+            lock (Handlers) {
                 return Handlers.Contains(handler);
             }
         }
 
         public IEnumerable<ILogHandler> GetHandlers() {
-            lock (Locker) {
+            lock (Handlers) {
                 return Handlers.ToList();
             }
         }
-
-        public void Entry(LogSeverity severity, params object[] data) =>
-            Entry(new LogEntry(severity, Name, data));
-
-        public bool DebugEnabled => Enabled(LogSeverity.Debug);
-        public bool InfoEnabled => Enabled(LogSeverity.Info);
-        public bool WarnEnabled => Enabled(LogSeverity.Warn);
-        public bool ErrorEnabled => Enabled(LogSeverity.Error);
-        public bool CriticalEnabled => Enabled(LogSeverity.Critical);
 
         public Logger(string name, Type type, object owner) {
             Name = name;
@@ -130,17 +122,18 @@ namespace Domore.Logs {
             Owner = owner;
         }
 
-        public void Debug(params object[] data) => Entry(LogSeverity.Debug, data);
-        public void Info(params object[] data) => Entry(LogSeverity.Info, data);
-        public void Warn(params object[] data) => Entry(LogSeverity.Warn, data);
-        public void Error(params object[] data) => Entry(LogSeverity.Error, data);
-        public void Critical(params object[] data) => Entry(LogSeverity.Critical, data);
+        public bool Entry(LogSeverity severity, params object[] data) => Enter(severity, data);
+        public bool Debug(params object[] data) => Enter(LogSeverity.Debug, data);
+        public bool Info(params object[] data) => Enter(LogSeverity.Info, data);
+        public bool Warn(params object[] data) => Enter(LogSeverity.Warn, data);
+        public bool Error(params object[] data) => Enter(LogSeverity.Error, data);
+        public bool Critical(params object[] data) => Enter(LogSeverity.Critical, data);
 
-        void ILog.Entry(LogSeverity severity, string message) => Entry(severity, message);
-        void ILog.Debug(string message) => Debug(message);
-        void ILog.Info(string message) => Info(message);
-        void ILog.Warn(string message) => Warn(message);
-        void ILog.Error(string message) => Error(message);
-        void ILog.Critical(string message) => Critical(message);
+        public bool Entry(LogSeverity severity, string message) => Enter(severity, message == null ? null : new[] { message });
+        public bool Debug(string message) => Enter(LogSeverity.Debug, message == null ? null : new[] { message });
+        public bool Info(string message) => Enter(LogSeverity.Info, message == null ? null : new[] { message });
+        public bool Warn(string message) => Enter(LogSeverity.Warn, message == null ? null : new[] { message });
+        public bool Error(string message) => Enter(LogSeverity.Error, message == null ? null : new[] { message });
+        public bool Critical(string message) => Enter(LogSeverity.Critical, message == null ? null : new[] { message });
     }
 }

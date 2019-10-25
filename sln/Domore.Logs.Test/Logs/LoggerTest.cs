@@ -49,9 +49,9 @@ namespace Domore.Logs {
         [TestCase(LogSeverity.Error, false)]
         [TestCase(LogSeverity.Critical, false)]
         [TestCase(LogSeverity.None, false)]
-        public void Severity_ChangesDebugEnabled(LogSeverity value, bool expected) {
+        public void Severity_ChangesDebug(LogSeverity value, bool expected) {
             SetSeverity(value);
-            var actual = Subject.DebugEnabled;
+            var actual = Subject.Debug();
             Assert.AreEqual(expected, actual);
         }
 
@@ -61,9 +61,9 @@ namespace Domore.Logs {
         [TestCase(LogSeverity.Error, false)]
         [TestCase(LogSeverity.Critical, false)]
         [TestCase(LogSeverity.None, false)]
-        public void Severity_ChangesInfoEnabled(LogSeverity value, bool expected) {
+        public void Severity_ChangesInfo(LogSeverity value, bool expected) {
             SetSeverity(value);
-            var actual = Subject.InfoEnabled;
+            var actual = Subject.Info();
             Assert.AreEqual(expected, actual);
         }
 
@@ -73,9 +73,9 @@ namespace Domore.Logs {
         [TestCase(LogSeverity.Error, false)]
         [TestCase(LogSeverity.Critical, false)]
         [TestCase(LogSeverity.None, false)]
-        public void Severity_ChangesWarnEnabled(LogSeverity value, bool expected) {
+        public void Severity_ChangesWarn(LogSeverity value, bool expected) {
             SetSeverity(value);
-            var actual = Subject.WarnEnabled;
+            var actual = Subject.Warn();
             Assert.AreEqual(expected, actual);
         }
 
@@ -85,9 +85,9 @@ namespace Domore.Logs {
         [TestCase(LogSeverity.Error, true)]
         [TestCase(LogSeverity.Critical, false)]
         [TestCase(LogSeverity.None, false)]
-        public void Severity_ChangesErrorEnabled(LogSeverity value, bool expected) {
+        public void Severity_ChangesError(LogSeverity value, bool expected) {
             SetSeverity(value);
-            var actual = Subject.ErrorEnabled;
+            var actual = Subject.Error();
             Assert.AreEqual(expected, actual);
         }
 
@@ -97,9 +97,9 @@ namespace Domore.Logs {
         [TestCase(LogSeverity.Error, true)]
         [TestCase(LogSeverity.Critical, true)]
         [TestCase(LogSeverity.None, false)]
-        public void Severity_ChangesCriticalEnabled(LogSeverity value, bool expected) {
+        public void Severity_ChangesCritical(LogSeverity value, bool expected) {
             SetSeverity(value);
-            var actual = Subject.CriticalEnabled;
+            var actual = Subject.Critical();
             Assert.AreEqual(expected, actual);
         }
 
@@ -161,7 +161,7 @@ namespace Domore.Logs {
             handler.Format = format;
             Subject.AddHandler(handler);
             Subject.Info(data);
-            Assert.That(expected, Is.EqualTo(handler.Entries[0]));
+            Assert.That(handler.Entries[0], Is.EqualTo(expected));
         }
     }
 }

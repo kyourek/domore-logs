@@ -94,15 +94,12 @@ namespace Domore.Logs {
                 }
 
                 if (maxCnt > 0) {
-                    var entryColl = EntryCollection;
-
                     if (truncIndex > truncDelay) {
-                        while (entryColl.Count > maxCnt) {
-                            entryColl.RemoveAt(0);
+                        while (EntryCollection.Count > maxCnt) {
+                            EntryCollection.RemoveAt(0);
                         }
                     }
-
-                    entryColl.Add(new LogbookEntry(message, severity));
+                    EntryCollection.Add(new LogbookEntry(message, severity));
                 }
 
                 TruncateIndex = truncIndex > truncDelay
