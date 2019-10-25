@@ -129,11 +129,11 @@ namespace Domore.Logs {
         public bool Error(params object[] data) => Enter(LogSeverity.Error, data);
         public bool Critical(params object[] data) => Enter(LogSeverity.Critical, data);
 
-        public bool Entry(LogSeverity severity, string message) => Enter(severity, message == null ? null : new[] { message });
-        public bool Debug(string message) => Enter(LogSeverity.Debug, message == null ? null : new[] { message });
-        public bool Info(string message) => Enter(LogSeverity.Info, message == null ? null : new[] { message });
-        public bool Warn(string message) => Enter(LogSeverity.Warn, message == null ? null : new[] { message });
-        public bool Error(string message) => Enter(LogSeverity.Error, message == null ? null : new[] { message });
-        public bool Critical(string message) => Enter(LogSeverity.Critical, message == null ? null : new[] { message });
+        public bool Entry(LogSeverity severity, object message) => Enter(severity, message == null ? null : new[] { message });
+        public bool Debug(object message) => Enter(LogSeverity.Debug, message == null ? null : new[] { message });
+        public bool Info(object message) => Enter(LogSeverity.Info, message == null ? null : new[] { message });
+        public bool Warn(object message) => Enter(LogSeverity.Warn, message == null ? null : new[] { message });
+        public bool Error(object message) => Enter(LogSeverity.Error, message == null ? null : new[] { message });
+        public bool Critical(object message) => Enter(LogSeverity.Critical, message == null ? null : new[] { message });
     }
 }
