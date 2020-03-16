@@ -3,12 +3,12 @@
   <PropertyGroup>
     <Authors>Ken Yourek</Authors>
     <Copyright>Copyright © Ken Yourek 2019</Copyright>
-    <VersionPrefix>2.0.1</VersionPrefix>
+    <VersionPrefix>2.0.2</VersionPrefix>
     <VersionSuffix></VersionSuffix>
-    <AssemblyVersion>2.0.1</AssemblyVersion>
-    <InformationalVersion>2.0.1</InformationalVersion>
-    <FileVersion>2.0.2.16</FileVersion>
-    <PackageVersion>2.0.1</PackageVersion>
+    <AssemblyVersion>2.0.2</AssemblyVersion>
+    <InformationalVersion>2.0.2</InformationalVersion>
+    <FileVersion>2.0.2.17</FileVersion>
+    <PackageVersion>2.0.2</PackageVersion>
     <PackageProjectUrl>https://github.com/kyourek/Domore.Logs</PackageProjectUrl>
     <RepositoryType>git</RepositoryType>
     <RepositoryUrl>https://github.com/kyourek/Domore.Logs.git</RepositoryUrl>
