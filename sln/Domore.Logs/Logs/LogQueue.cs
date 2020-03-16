@@ -22,6 +22,9 @@ namespace Domore.Logs {
                     if (ex is InvalidOperationException && Collection.IsAddingCompleted) {
                         break;
                     }
+                    if (ex is OperationCanceledException && Collection.IsAddingCompleted) {
+                        break;
+                    }
                     throw;
                 }
 
@@ -77,20 +80,21 @@ namespace Domore.Logs {
                 if (ex is InvalidOperationException && Collection.IsAddingCompleted) {
                     return;
                 }
+                if (ex is OperationCanceledException && Collection.IsAddingCompleted) {
+                    return;
+                }
                 throw;
             }
 
             if (Thread == null) {
-                ThreadPool.QueueUserWorkItem(_ => {
-                    lock (ThreadLocker) {
-                        if (Thread == null) {
-                            Thread = new Thread(ThreadStart);
-                            Thread.Name = GetType().FullName;
-                            Thread.IsBackground = true;
-                            Thread.Start();
-                        }
+                lock (ThreadLocker) {
+                    if (Thread == null) {
+                        Thread = new Thread(ThreadStart);
+                        Thread.Name = GetType().FullName;
+                        Thread.IsBackground = true;
+                        Thread.Start();
                     }
-                });
+                }
             }
         }
 
