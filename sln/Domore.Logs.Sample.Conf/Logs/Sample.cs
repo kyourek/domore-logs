@@ -19,11 +19,11 @@ namespace Domore.Logs.Sample {
     internal class Sample {
         public void Run() {
             var log = Logging.For(this);
-            log.Debug("Debug message written to file");
-            log.Info("Info message written to file.");
-            log.Warn("Warn message written to file.");
-            log.Error("Error message written to file.");
-            log.Critical("Critical message written to file.");
+            log.Debug("Debug message logged");
+            log.Info("Info message logged");
+            log.Warn("Warn message logged");
+            log.Error("Error message logged");
+            log.Critical("Critical message logged");
         }
     }
 }
