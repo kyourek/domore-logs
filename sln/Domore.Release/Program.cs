@@ -1,7 +1,7 @@
 ﻿namespace Domore {
-    class Program {
-        static void Main(string[] args) {
-            new Release(args);
+    internal class Program {
+        private static void Main(string[] args) {
+            Console.Release(args);
         }
     }
 }
