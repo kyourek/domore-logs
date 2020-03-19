@@ -3,17 +3,17 @@
   <PropertyGroup>
     <Authors>Ken Yourek</Authors>
     <Copyright>Copyright © Ken Yourek 2019</Copyright>
-    <VersionPrefix>2.1.0</VersionPrefix>
+    <VersionPrefix>2.1.0.20</VersionPrefix>
     <VersionSuffix></VersionSuffix>
-    <AssemblyVersion>2.1.0</AssemblyVersion>
-    <InformationalVersion>2.1.0</InformationalVersion>
-    <FileVersion>2.1.0.19</FileVersion>
-    <PackageVersion>2.1.0</PackageVersion>
+    <AssemblyVersion>2.1.0.20</AssemblyVersion>
+    <InformationalVersion>2.1.0.20</InformationalVersion>
+    <FileVersion>2.1.0.20</FileVersion>
+    <PackageVersion>2.1.0.20</PackageVersion>
     <PackageProjectUrl>https://github.com/kyourek/Domore.Logs</PackageProjectUrl>
     <RepositoryType>git</RepositoryType>
-    <RepositoryUrl>https://github.com/kyourek/Domore.Logs.git</RepositoryUrl>
-    <RepositoryBranch></RepositoryBranch>
-    <RepositoryCommit></RepositoryCommit>
+    <RepositoryUrl>https://github.com/kyourek/domore-logs.git</RepositoryUrl>
+    <RepositoryBranch>master</RepositoryBranch>
+    <RepositoryCommit>7f55bbfb9a5437096c431ba817499fecf5888659</RepositoryCommit>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
     <PackageTags>log;logs;logger;logging</PackageTags>
