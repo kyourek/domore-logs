@@ -4,4 +4,7 @@
     <RootNamespace>Domore</RootNamespace>
     <Description>Do more logs</Description>
   </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Domore.Notification" Version="0.3.0.5" />
+  </ItemGroup>
 </Project>

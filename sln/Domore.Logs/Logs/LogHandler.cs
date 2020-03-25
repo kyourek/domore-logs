@@ -3,24 +3,24 @@ using System.Collections.Generic;
 using System.Linq;
 
 namespace Domore.Logs {
-    using ComponentModel;
+    using Notification;
 
-    public abstract class LogHandler : NotifyPropertyChangedImplementation, ILogHandler {
+    public abstract class LogHandler : Notifier, ILogHandler {
         public LogSeverity Severity {
             get => _Severity;
-            set => Change(ref _Severity, value, nameof(Severity));
+            set => _Severity = Change(_Severity, value, nameof(Severity));
         }
         private LogSeverity _Severity = LogSeverity.None;
 
         public string Name {
             get => _Name;
-            internal set => Change(ref _Name, value, nameof(Name));
+            internal set => _Name = Change(_Name, value, nameof(Name));
         }
         private string _Name;
 
         public string Format {
             get => _Format;
-            set => Change(ref _Format, value, nameof(Format));
+            set => _Format = Change(_Format, value, nameof(Format));
         }
         private string _Format;
 

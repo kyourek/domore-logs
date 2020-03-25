@@ -4,9 +4,9 @@ using System.ComponentModel;
 using System.Linq;
 
 namespace Domore.Logs {
-    using ComponentModel;
+    using Notification;
 
-    internal class Logger : NotifyPropertyChangedImplementation, ILog {
+    internal class Logger : Notifier, ILog {
         private readonly ISet<ILogHandler> Handlers = new HashSet<ILogHandler>();
 
         private void Handler_PropertyChanged(object sender, PropertyChangedEventArgs e) {
@@ -55,7 +55,7 @@ namespace Domore.Logs {
 
         public LogSeverity Severity {
             get => _Severity;
-            private set => Change(ref _Severity, value, nameof(Severity));
+            private set => _Severity = Change(_Severity, value, nameof(Severity));
         }
         private LogSeverity _Severity = LogSeverity.None;
 
