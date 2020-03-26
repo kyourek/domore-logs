@@ -26,6 +26,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Domore.Logs.Conf", "Domore.
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Domore.Logs.Sample.Conf", "Domore.Logs.Sample.Conf\Domore.Logs.Sample.Conf.csproj", "{3BCED9FE-7833-4F48-8C19-7848093923D1}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Domore.Logs.Abstractions", "Domore.Logs.Abstractions\Domore.Logs.Abstractions.csproj", "{D6C50C5E-41F8-49DC-B76C-EAA20450A04D}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -55,6 +57,10 @@ Global
 		{3BCED9FE-7833-4F48-8C19-7848093923D1}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{3BCED9FE-7833-4F48-8C19-7848093923D1}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{3BCED9FE-7833-4F48-8C19-7848093923D1}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D6C50C5E-41F8-49DC-B76C-EAA20450A04D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D6C50C5E-41F8-49DC-B76C-EAA20450A04D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D6C50C5E-41F8-49DC-B76C-EAA20450A04D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D6C50C5E-41F8-49DC-B76C-EAA20450A04D}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
