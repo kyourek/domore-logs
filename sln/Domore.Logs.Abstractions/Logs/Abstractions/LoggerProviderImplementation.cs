@@ -2,17 +2,14 @@
 using System;
 
 namespace Domore.Logs.Abstractions {
-    internal class LoggerProviderImplementation : ILoggerProvider {
+    public class LoggerProviderImplementation : ILoggerProvider {
         protected virtual void Dispose(bool disposing) {
         }
 
-        public ILog Log { get; }
-
-        public LoggerProviderImplementation(ILog log) =>
-            Log = log;
+        public ILog Log { get; set; }
 
         public ILogger CreateLogger(string categoryName) =>
-            new LoggerImplementation(Log, categoryName);
+            new LoggerImplementation(categoryName) { Log = Log };
 
         public void Dispose() {
             Dispose(true);

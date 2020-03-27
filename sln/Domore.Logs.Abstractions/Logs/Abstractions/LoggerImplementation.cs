@@ -6,11 +6,15 @@ namespace Domore.Logs.Abstractions {
     internal class LoggerImplementation : ILogger {
         private readonly List<object> Headers;
 
-        public ILog Log { get; }
         public string CategoryName { get; }
 
-        public LoggerImplementation(ILog log, string categoryName) {
-            Log = log ?? throw new ArgumentNullException(nameof(log));
+        public ILog Log {
+            get => _Log ?? (_Log = Logging.For(typeof(ILogger)));
+            set => _Log = value;
+        }
+        private ILog _Log;
+
+        public LoggerImplementation(string categoryName) {
             CategoryName = categoryName;
             Headers = new List<object> { CategoryName };
         }

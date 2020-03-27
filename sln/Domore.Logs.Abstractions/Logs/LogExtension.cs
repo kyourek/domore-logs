@@ -5,6 +5,6 @@ namespace Domore.Logs {
 
     public static class LogExtension {
         public static ILoggerProvider Provider(this ILog log) =>
-            new LoggerProviderImplementation(log);
+            new LoggerProviderImplementation { Log = log };
     }
 }
