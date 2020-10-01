@@ -8,19 +8,19 @@ namespace Domore.Logs {
     public abstract class LogHandler : Notifier, ILogHandler {
         public LogSeverity Severity {
             get => _Severity;
-            set => _Severity = Change(_Severity, value, nameof(Severity));
+            set => Change(ref _Severity, value, nameof(Severity));
         }
         private LogSeverity _Severity = LogSeverity.None;
 
         public string Name {
             get => _Name;
-            internal set => _Name = Change(_Name, value, nameof(Name));
+            internal set => Change(ref _Name, value, nameof(Name));
         }
         private string _Name;
 
         public string Format {
             get => _Format;
-            set => _Format = Change(_Format, value, nameof(Format));
+            set => Change(ref _Format, value, nameof(Format));
         }
         private string _Format;
 

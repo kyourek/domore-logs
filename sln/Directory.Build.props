@@ -7,7 +7,7 @@
     <VersionSuffix></VersionSuffix>
     <AssemblyVersion>3.0.0.24</AssemblyVersion>
     <InformationalVersion>3.0.0.24</InformationalVersion>
-    <FileVersion>3.0.0.24</FileVersion>
+    <FileVersion>3.1.0.24</FileVersion>
     <PackageVersion>3.0.0.24</PackageVersion>
     <PackageProjectUrl>https://github.com/kyourek/Domore.Logs</PackageProjectUrl>
     <RepositoryType>git</RepositoryType>

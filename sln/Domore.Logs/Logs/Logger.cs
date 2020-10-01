@@ -55,7 +55,7 @@ namespace Domore.Logs {
 
         public LogSeverity Severity {
             get => _Severity;
-            private set => _Severity = Change(_Severity, value, nameof(Severity));
+            private set => Change(ref _Severity, value, nameof(Severity));
         }
         private LogSeverity _Severity = LogSeverity.None;
 
