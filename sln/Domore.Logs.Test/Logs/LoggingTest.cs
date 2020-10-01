@@ -133,5 +133,19 @@ namespace Domore.Logs {
             var expected = TimeSpan.Parse(clearInterval);
             Assert.AreEqual(expected, actual);
         }
+
+        [Test]
+        public void Complete_DoesNotThrowExceptionWithTimeout() {
+            Logging.CompleteTimeout = TimeSpan.FromSeconds(2.5);
+            Logging.Complete();
+        }
+
+        [Test]
+        public void Complete_DoesNotThrowExceptionWithTimeoutAfterLog() {
+            var log = Logging.For(this);
+            log.Critical("Message");
+            Logging.CompleteTimeout = TimeSpan.FromSeconds(2.5);
+            Logging.Complete();
+        }
     }
 }

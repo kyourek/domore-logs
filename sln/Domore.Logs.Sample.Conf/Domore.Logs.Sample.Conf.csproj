@@ -5,8 +5,8 @@
     <RootNamespace>Domore</RootNamespace>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="Domore.Conf" Version="3.6.4.27" />
-    <PackageReference Include="Domore.Conf.ConfigurationManager" Version="3.6.4.27" />
+    <PackageReference Include="Domore.Conf" Version="3.7.4.28" />
+    <PackageReference Include="Domore.Conf.ConfigurationManager" Version="3.7.4.28" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Domore.Logs.Conf\Domore.Logs.Conf.csproj" />
