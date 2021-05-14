@@ -5,7 +5,7 @@
     <Description>Do more logs conf</Description>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="Domore.Conf" Version="3.7.4.28" />
+    <PackageReference Include="Domore.Conf" Version="3.7.4.29" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Domore.Logs\Domore.Logs.csproj" />
