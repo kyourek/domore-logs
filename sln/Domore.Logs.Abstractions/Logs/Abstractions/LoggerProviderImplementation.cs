@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Logging;
+﻿#if !NETFRAMEWORK
+using Microsoft.Extensions.Logging;
 using System;
 
 namespace Domore.Logs.Abstractions {
@@ -21,3 +22,4 @@ namespace Domore.Logs.Abstractions {
         }
     }
 }
+#endif

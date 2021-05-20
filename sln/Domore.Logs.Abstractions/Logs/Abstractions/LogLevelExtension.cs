@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Logging;
+﻿#if !NETFRAMEWORK
+using Microsoft.Extensions.Logging;
 
 namespace Domore.Logs.Abstractions {
     internal static class LogLevelExtension {
@@ -16,3 +17,4 @@ namespace Domore.Logs.Abstractions {
         }
     }
 }
+#endif

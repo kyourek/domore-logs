@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Logging;
+﻿#if !NETFRAMEWORK
+using Microsoft.Extensions.Logging;
 
 namespace Domore.Logs {
     using Abstractions;
@@ -8,3 +9,4 @@ namespace Domore.Logs {
             new LoggerProviderImplementation { Log = log };
     }
 }
+#endif
