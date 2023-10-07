@@ -3,10 +3,14 @@ using System;
 using System.Linq;
 
 namespace Domore.Logs {
-    using Handlers;
-
     [TestFixture]
-    public class LoggingTest {
+    public sealed class LoggingTest {
+        private class TestService : ILogService {
+            void ILogService.Log(string name, string data, LogSeverity severity) {
+                throw new NotImplementedException();
+            }
+        }
+
         private class LogFileConfiguration : ILogConfiguration {
             public LogSeverity Severity { get; set; }
             public string Name { get; set; }
@@ -24,9 +28,6 @@ namespace Domore.Logs {
         [SetUp]
         public void SetUp() {
             Logging.Reset();
-            Logging.Handler.Clear();
-            Logging.Handler["log"] = "logfile";
-            Logging.Configuration = null;
         }
 
         [TearDown]
@@ -41,26 +42,12 @@ namespace Domore.Logs {
             Assert.IsNotNull(file);
         }
 
-        //[Test]
-        //public void For_AddsLogMailHandler() {
-        //    var log = (Logger)Logging.For(typeof(LoggingTest));
-        //    var mail = log.GetHandlers().OfType<LogMail>().SingleOrDefault();
-        //    Assert.IsNotNull(mail);
-        //}
-
         [Test]
         public void For_SetsLogFileSeverity() {
             var log = (Logger)Logging.For(typeof(LoggingTest));
             var file = log.GetHandlers().OfType<LogFile>().First();
             Assert.AreEqual(LogSeverity.None, file.Severity);
         }
-
-        //[Test]
-        //public void For_SetsLogMailSeverity() {
-        //    var log = (Logger)Logging.For(typeof(LoggingTest));
-        //    var mail = log.GetHandlers().OfType<LogMail>().First();
-        //    Assert.AreEqual(LogSeverity.Critical, mail.Severity);
-        //}
 
         [TestCase(LogSeverity.Debug)]
         [TestCase(LogSeverity.Info)]
@@ -86,42 +73,6 @@ namespace Domore.Logs {
 
             Assert.AreEqual(filename, file.Name);
         }
-
-        //[TestCase(LogSeverity.Debug)]
-        //[TestCase(LogSeverity.Info)]
-        //[TestCase(LogSeverity.Warn)]
-        //[TestCase(LogSeverity.Error)]
-        //[TestCase(LogSeverity.Critical)]
-        //[TestCase(LogSeverity.None)]
-        //public void For_SetsMailSeverityFromConfiguration(LogSeverity severity) {
-        //    Logging.Configuration.Content = "Domore.Logs.LoggingTest.mail.Severity = " + severity;
-
-        //    var log = (Logger)Logging.For(typeof(LoggingTest));
-        //    var mail = log.GetHandlers().OfType<LogMail>().First();
-
-        //    Assert.AreEqual(severity, mail.Severity);
-        //}
-
-        //[TestCase("kyourek@domore.com")]
-        //[TestCase("gcorral@domore.com")]
-        //public void For_SetsMailToFromConfiguration(string to) {
-        //    Logging.Configuration.Content = "Domore.Logs.LoggingTest.mail.To = " + to;
-
-        //    var log = (Logger)Logging.For(typeof(LoggingTest));
-        //    var mail = log.GetHandlers().OfType<LogMail>().First();
-
-        //    Assert.AreEqual(to, mail.To);
-        //}
-
-        //[TestCase("recipient@logs.org")]
-        //public void For_SetsMailToGloballyFromConfiguration(string to) {
-        //    Logging.Configuration.Content = "LogMail.To = " + to;
-
-        //    var log = (Logger)Logging.For(typeof(LoggingTest));
-        //    var mail = log.GetHandlers().OfType<LogMail>().First();
-
-        //    Assert.AreEqual(to, mail.To);
-        //}
 
         [TestCase("7")]
         [TestCase("12:00:00")]

@@ -1,7 +1,7 @@
 ﻿#if !NETFRAMEWORK
-namespace Domore.Logs {
-    using Abstractions;
+using Domore.Logs.Abstractions;
 
+namespace Domore.Logs {
     public class LoggerProvider : LoggerProviderImplementation {
     }
 }

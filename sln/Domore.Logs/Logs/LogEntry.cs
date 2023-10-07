@@ -4,7 +4,7 @@ using System.Linq;
 
 namespace Domore.Logs {
     internal sealed class LogEntry {
-        private static readonly IReadOnlyDictionary<LogSeverity, string> Sev = new Dictionary<LogSeverity, string> {
+        private static readonly Dictionary<LogSeverity, string> Sev = new Dictionary<LogSeverity, string> {
             { LogSeverity.Critical, "crt" },
             { LogSeverity.Debug, "dbg" },
             { LogSeverity.Error, "err" },
@@ -17,7 +17,7 @@ namespace Domore.Logs {
         private string GetFormat(string format) {
             var s = format.Replace("{log}", LogName).Replace("{sev}", Sev[LogSeverity]);
             var logList = LogList;
-            if (logList.Count == 1) {
+            if (logList.Length == 1) {
                 return s == ""
                     ? logList[0]
                     : s + " " + logList[0];
@@ -31,15 +31,15 @@ namespace Domore.Logs {
         }
 
         public Type LogType { get; }
+        public string[] LogList { get; }
         public LogSeverity LogSeverity { get; }
-        public IReadOnlyList<string> LogList { get; }
 
         public string LogName =>
             _LogName ?? (
             _LogName = LogType.Name);
         private string _LogName;
 
-        public LogEntry(Type logType, LogSeverity logSeverity, IReadOnlyList<string> logList) {
+        public LogEntry(Type logType, LogSeverity logSeverity, string[] logList) {
             if (null == logType) throw new ArgumentNullException(nameof(logType));
             if (null == logList) throw new ArgumentNullException(nameof(logList));
             LogType = logType;

@@ -24,7 +24,7 @@ namespace Domore.Logs.Abstractions {
             new Scope(this, state);
 
         bool ILogger.IsEnabled(LogLevel logLevel) =>
-            Log.Entry(logLevel.Severity());
+            Log.Enabled(logLevel.Severity());
 
         void ILogger.Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception exception, Func<TState, Exception, string> formatter) {
             var list = new List<object>(Headers) { eventId };
@@ -39,7 +39,7 @@ namespace Domore.Logs.Abstractions {
 
             var data = list.ToArray();
             var severity = logLevel.Severity();
-            Log.Entry(severity, data);
+            Log.Data(severity, data);
         }
 
         private class Scope : IDisposable {
