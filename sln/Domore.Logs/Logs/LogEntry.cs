@@ -1,73 +1,58 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
-using System.Runtime.InteropServices;
 
 namespace Domore.Logs {
-    [Guid("9EF02708-4A4D-4FB9-9F2A-6FC6B0A611B9")]
-    [ComVisible(true)]
-#if NETCOREAPP
-    [ClassInterface(ClassInterfaceType.None)]
-#else
-    [ClassInterface(ClassInterfaceType.AutoDispatch)]
-#endif
-    public class LogEntry {
-        public string LogName { get; }
-        public DateTime Time { get; }
-        public LogSeverity Severity { get; }
-        public object[] Data { get; }
-        public string[] DataStrings { get; }
+    internal sealed class LogEntry {
+        private static readonly IReadOnlyDictionary<LogSeverity, string> Sev = new Dictionary<LogSeverity, string> {
+            { LogSeverity.Critical, "crt" },
+            { LogSeverity.Debug, "dbg" },
+            { LogSeverity.Error, "err" },
+            { LogSeverity.Info, "inf" },
+            { LogSeverity.Warn, "wrn" }
+        };
 
-        public string DataString =>
-            _DataString ?? (
-            _DataString = string.Join(Environment.NewLine, DataStrings));
-        private string _DataString;
+        private readonly Dictionary<string, string> Format = new Dictionary<string, string>();
 
-        public LogEntry(DateTime time, LogSeverity severity, string logName, object[] data) {
-            LogName = logName;
-            Severity = severity;
-            Time = time;
-            Data = data;
-            DataStrings = (Data ?? new object[] { })
-                .Where(d => d != null)
-                .Select(d => (d.ToString() ?? "").Trim())
-                .ToArray();
-        }
-
-        public LogEntry(DateTime time, LogSeverity severity, object[] data) : this(time, severity, null, data) { }
-        public LogEntry(LogSeverity severity, string logName, object[] data) : this(DateTime.Now, severity, logName, data) { }
-        public LogEntry(LogSeverity severity, object[] data) : this(severity, null, data) { }
-
-        public string ToString(string format) {
-            format = (format ?? "").Trim();
-            format = (format == "") ? "{Time:yyyy-MM-dd HH:mm:ss} [{Severity}] {Data}" : format;
-            format = (format
-                .Replace("Name", "0")
-                .Replace("Time", "1")
-                .Replace("Severity", "2")
-                .Replace("Data", "3"));
-
-            return string.Format(format,
-                LogName,
-                Time,
-                Severity,
-                DataString);
-        }
-
-        public override string ToString() =>
-            ToString(null);
-
-        public static LogEntry Create(string message, Exception error = null, LogSeverity? severity = null) {
-            if (severity == null) {
-                severity = error == null
-                    ? LogSeverity.Info
-                    : LogSeverity.Error;
+        private string GetFormat(string format) {
+            var s = format.Replace("{log}", LogName).Replace("{sev}", Sev[LogSeverity]);
+            var logList = LogList;
+            if (logList.Count == 1) {
+                return s == ""
+                    ? logList[0]
+                    : s + " " + logList[0];
             }
+            return s == ""
+                ? string.Join(Environment.NewLine, logList)
+                : s + Environment.NewLine + string.Join(Environment.NewLine, logList
+                    .Select(d => string.Join(Environment.NewLine, d
+                        .Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries)
+                        .Select(line => $"    {line}"))));
+        }
 
-            var data = error == null
-                ? new object[] { message }
-                : new object[] { message, error };
+        public Type LogType { get; }
+        public LogSeverity LogSeverity { get; }
+        public IReadOnlyList<string> LogList { get; }
 
-            return new LogEntry(severity.Value, data);
+        public string LogName =>
+            _LogName ?? (
+            _LogName = LogType.Name);
+        private string _LogName;
+
+        public LogEntry(Type logType, LogSeverity logSeverity, IReadOnlyList<string> logList) {
+            if (null == logType) throw new ArgumentNullException(nameof(logType));
+            if (null == logList) throw new ArgumentNullException(nameof(logList));
+            LogType = logType;
+            LogList = logList;
+            LogSeverity = logSeverity;
+        }
+
+        public string LogData(string format) {
+            var key = format ?? "";
+            if (Format.TryGetValue(key, out var value) == false) {
+                Format[key] = value = GetFormat(key);
+            }
+            return value;
         }
     }
 }

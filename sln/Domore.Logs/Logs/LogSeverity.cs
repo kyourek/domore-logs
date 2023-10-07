@@ -1,14 +1,10 @@
-﻿using System.Runtime.InteropServices;
-
 namespace Domore.Logs {
-    [Guid("0DA1DB3C-5C5D-4F2D-94FB-A5111B1A5CA7")]
-    [ComVisible(true)]
     public enum LogSeverity {
+        None = 0,
         Debug = 1,
-        Info,
-        Warn,
-        Error,
-        Critical,
-        None = 99
+        Info = 2,
+        Warn = 3,
+        Error = 4,
+        Critical = 5
     }
 }

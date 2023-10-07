@@ -1,75 +1,31 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Runtime.InteropServices;
+using System;
+using System.Runtime.CompilerServices;
 
 namespace Domore.Logs {
-    [Guid("D52278CA-BF09-4640-8C39-8F4B057766E9")]
-    [ComVisible(true)]
-    [ClassInterface(ClassInterfaceType.None)]
-    public class Logging : ILogging {
-        private static LogManager Manager {
-            get {
-                if (_Manager == null) {
-                    _Manager = new LogManager { Configuration = Configuration, Handler = Handler };
-                    Configuration.Configure(_Manager);
-                    Configuration.Configure(_Manager, "Logging");
-                }
-                return _Manager;
-            }
-            set => _Manager = value;
-        }
-        private static LogManager _Manager;
+    public sealed class Logging {
+        private readonly static Logging Instance = new Logging();
+        private readonly LogServiceFactory Factory = new LogServiceFactory();
+        private readonly LogServiceCollection Services = new LogServiceCollection();
 
-        private static ILog For(string name, Type type, object owner) =>
-            Manager.GetLog(name, type, owner);
-
-        internal static IDictionary<string, string> Handler =>
-            _Handler ?? (
-            _Handler = new Dictionary<string, string>());
-        private static IDictionary<string, string> _Handler;
-
-        public static ILogConfiguration Configuration {
-            get => _Configuration ?? (_Configuration = new LogConfiguration());
-            set => _Configuration = value;
-        }
-        private static ILogConfiguration _Configuration;
-
-        public static TimeSpan CompleteTimeout {
-            get => Manager.CompleteTimeout;
-            set => Manager.CompleteTimeout = value;
+        [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+        internal bool Log(Logger logger, LogSeverity severity) {
+            return Services.Log(severity, logger?.Type);
         }
 
-        public static void Add(ILogHandler handler, params object[] logs) =>
-            Manager.AddHandler(handler, logs);
-
-        public static ILog For(Type type, string name = null) {
-            if (null == type) throw new ArgumentNullException(nameof(type));
-            return For(name ?? type.FullName, type, null);
+        [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+        internal void Log(Logger logger, LogSeverity severity, params object[] data) {
+            Services.Log(severity, logger?.Type, data);
         }
 
-        public static ILog For(object owner, string name = null) {
-            if (null == owner) throw new ArgumentNullException(nameof(owner));
-            var type = owner.GetType();
-            return For(name ?? type.FullName, type, owner);
+        public static object Config =>
+            new { Log = Instance.Services };
+
+        public static ILog For(Type type) {
+            return new Logger(type, Instance);
         }
 
         public static void Complete() {
-            Manager.Complete();
-            Manager.Dispose();
+            Instance.Services.Complete();
         }
-
-        public static void Reset() {
-            Manager = null;
-        }
-
-        TimeSpan ILogging.CompleteTimeout { get => CompleteTimeout; set => CompleteTimeout = value; }
-        ILogConfiguration ILogging.Configuration { get => Configuration; set => Configuration = value; }
-        ILog ILogging.For(string name) => For(name, null, null);
-        ILog ILogging.For(Type type, string name) => For(type, name);
-        ILog ILogging.For(object owner, string name) => For(owner, name);
-        void ILogging.Add(ILogHandler handler, object log) => Add(handler, log);
-        void ILogging.Add(ILogHandler handler, params object[] logs) => Add(handler, logs);
-        void ILogging.Complete() => Complete();
-        void ILogging.Reset() => Reset();
     }
 }

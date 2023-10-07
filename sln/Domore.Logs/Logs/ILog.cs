@@ -1,48 +1,21 @@
-﻿using System.Runtime.InteropServices;
-
 namespace Domore.Logs {
-    [Guid("AA23D6E6-5744-410B-B30D-909106B8AA79")]
-    [ComVisible(true)]
-#if NETCOREAPP
-    [InterfaceType(ComInterfaceType.InterfaceIsIInspectable)]
-#else
-    [InterfaceType(ComInterfaceType.InterfaceIsIDispatch)]
-#endif
     public interface ILog {
-        [DispId(1)]
-        bool Entry(LogSeverity severity, object message);
+        bool Enabled(LogSeverity severity);
+        void Data(LogSeverity severity, params object[] data);
 
-        [DispId(2)]
-        bool Debug(object message);
+        bool Critical();
+        void Critical(params object[] data);
 
-        [DispId(3)]
-        bool Info(object message);
+        bool Info();
+        void Info(params object[] data);
 
-        [DispId(4)]
-        bool Warn(object message);
+        bool Error();
+        void Error(params object[] data);
 
-        [DispId(5)]
-        bool Error(object message);
+        bool Debug();
+        void Debug(params object[] data);
 
-        [DispId(6)]
-        bool Critical(object message);
-
-        [ComVisible(false)]
-        bool Entry(LogSeverity severity, params object[] data);
-
-        [ComVisible(false)]
-        bool Debug(params object[] data);
-
-        [ComVisible(false)]
-        bool Info(params object[] data);
-
-        [ComVisible(false)]
-        bool Warn(params object[] data);
-
-        [ComVisible(false)]
-        bool Error(params object[] data);
-
-        [ComVisible(false)]
-        bool Critical(params object[] data);
+        bool Warn();
+        void Warn(params object[] data);
     }
 }
