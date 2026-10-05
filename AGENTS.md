@@ -203,34 +203,36 @@ code more complicated, such as when the field must be `volatile`.
 
 ## Project structure
 
-- `domore-logs.slnx` is the solution entry point. It currently organizes
-  repository files and folders, while projects are discovered through their
-  individual project files.
+- `domore-logs.slnx` is the solution entry point. It contains two packable
+  libraries, one sample application, and two test projects.
 - Root build configuration:
   - `global.json` selects the .NET 10.0.100 SDK.
-  - `Directory.Build.props` defines common metadata, `net462`, `net48`,
-    `net8.0`, and `net10.0` target frameworks, and shared global usings.
+  - `Directory.Build.props` defines common package metadata and C# settings.
   - `Directory.Packages.props` enables Central Package Management and owns all
     package versions.
   - `.editorconfig` defines formatting and code-style rules.
 - `source/` contains packable library code:
-  - `Directory.Build.props` applies package, documentation, symbol, and
-    SourceLink settings to source projects.
-  - `Domore.Logs/` contains the `Domore.Logs` library project, its package
-    README, and implementation code.
+  - `Directory.Build.props` applies documentation, symbol, SourceLink, and
+    package settings, and targets `net40`, `net45`, `net462`, `net48`,
+    `netstandard2.0`, `netcoreapp3.1`, `net6.0`, `net8.0`, and `net10.0`.
+  - `Domore.Logs/` contains the `Domore.Logs` library, its package README,
+    and implementation code.
     - `Logs/` holds the public logging abstractions, logging configuration,
       queueing, formatting, and service implementations.
     - `Logs/Service/` contains console, debug, trace, and file log targets.
     - `Properties/AssemblyInfo.cs` contains assembly-level metadata.
+  - `Domore.Logs.Conf/` contains the `Domore.Logs.Conf` library, which
+    configures `Domore.Logs` from the external `Domore.Conf` package.
+- `samples/Domore.Logs.Sample/` is a non-packable console sample that
+  references both library projects. Its build settings target `net40`,
+  `net462`, and `net10.0`.
 - `tests/` contains non-packable NUnit test projects:
-  - `Directory.Build.props` supplies the test SDK, NUnit, Moq, test analyzer,
-    test adapter, and shared test usings.
+  - `Directory.Build.props` supplies the test SDK, NUnit, test analyzer, and
+    test adapter, and targets `net462`, `net48`, `net8.0`, and `net10.0`.
   - `Domore.Logs.Tests/` is the main test project. Tests are grouped by
-    `IO/`, `Logs/`, and `Services/`; reusable doubles live in `Mocks/`.
+    `Logs/` and `Logs/Services/`; reusable doubles live in `Logs/Mocks/`.
   - `Domore.Logs.ProcessExitProbe/` is a `net10.0` executable used by
     process-exit tests.
-- `samples/Directory.Build.props` is reserved for sample-project build
-  settings; no sample projects are currently present.
 - `.github/workflows/workflow.yml` restores, builds, and tests on pushes to
   `dev`, and packs and pushes NuGet packages for published releases.
 - Root documentation and repository files include `README.md`, `LICENSE`,
