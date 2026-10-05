@@ -1,0 +1,318 @@
+﻿using NUnit.Framework;
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Reflection;
+using System.Threading;
+
+namespace Domore.IO;
+
+public sealed class PathFormatterTest {
+    private PathFormatter Subject {
+        get => _Subject ??= new();
+        set => _Subject = value;
+    }
+    private PathFormatter _Subject;
+
+    [SetUp]
+    public void SetUp() {
+        Subject = null;
+    }
+
+    [TestCase("CommonApplicationData", Environment.SpecialFolder.CommonApplicationData)]
+    [TestCase("commondesktopDIRECTORY", Environment.SpecialFolder.CommonDesktopDirectory)]
+    [TestCase("personal", Environment.SpecialFolder.Personal)]
+    [TestCase("MYDocuments", Environment.SpecialFolder.MyDocuments)]
+    public void SpecialFolderNameIsExpandedToPath(string key, Environment.SpecialFolder specialFolder) {
+        var actual = Subject.Expand($"{{{key}}}");
+        var expected = Environment.GetFolderPath(specialFolder, Environment.SpecialFolderOption.DoNotVerify);
+        Assert.That(actual, Is.EqualTo(expected));
+    }
+
+    [TestCase("system", Environment.SpecialFolder.System)]
+    [TestCase("WINDOWS", Environment.SpecialFolder.Windows)]
+    public void SpecialFolderNameIsExpandedInPath(string key, Environment.SpecialFolder specialFolder) {
+        var actual = Subject.Expand(string.Join(Path.DirectorySeparatorChar.ToString(), $"{{{key}}}", "path", "to", "file.f"));
+        var expected = Path.Combine(Environment.GetFolderPath(specialFolder, Environment.SpecialFolderOption.DoNotVerify), "path", "to", "file.f");
+        Assert.That(actual, Is.EqualTo(expected));
+    }
+
+    [TestCase("programfiles", Environment.SpecialFolder.ProgramFiles)]
+    [TestCase("APPLICATIONDATA", Environment.SpecialFolder.ApplicationData)]
+    public void SpecialFolderNameIsExpandedInPathWithoutLeadingSeparator(string key, Environment.SpecialFolder specialFolder) {
+        var path = $"{{{key}}}" + string.Join(Path.DirectorySeparatorChar.ToString(), "path", "to", "file.f");
+        var actual = Subject.Expand(path);
+        var expected = Path.Combine(Environment.GetFolderPath(specialFolder, Environment.SpecialFolderOption.DoNotVerify), "path", "to", "file.f");
+        Assert.That(actual, Is.EqualTo(expected));
+    }
+
+    [TestCase("NotASpecialFolder")]
+    public void NothingIsDoneIfSpecialFolderIsNotFound(string key) {
+        var actual = Subject.Expand(string.Join(Path.DirectorySeparatorChar.ToString(), $"{{{key}}}", "path", "to", "file.f"));
+        var expected = actual;
+        Assert.That(actual, Is.EqualTo(expected));
+    }
+
+    [TestCase("StillNotASpecialFolder")]
+    public void NothingIsDoneForNonExistentSpecialFolder(string key) {
+        var actual = Subject.Expand($"{{{key}}}");
+        var expected = actual;
+        Assert.That(actual, Is.EqualTo(expected));
+    }
+
+    [TestCase("programfiles")]
+    [TestCase("APPLICATIONDATA")]
+    public void NothingIsDoneIfBracketIsNotClosed(string key) {
+        var actual = Subject.Expand(string.Join(Path.DirectorySeparatorChar.ToString(), $"{{{key}", "path", "to", "file.f"));
+        var expected = actual;
+        Assert.That(actual, Is.EqualTo(expected));
+    }
+
+    [TestCase("programfiles")]
+    [TestCase("APPLICATIONDATA")]
+    public void NothingIsDoneIfBracketIsNotOpened(string key) {
+        var actual = Subject.Expand(string.Join(Path.DirectorySeparatorChar.ToString(), $"{key}}}", "path", "to", "file.f"));
+        var expected = actual;
+        Assert.That(actual, Is.EqualTo(expected));
+    }
+
+    [Test]
+    public void NullIsReturnedIfPathIsNull() {
+        Assert.That(Subject.Expand(null), Is.Null);
+    }
+
+    [Test]
+    public void EmptyIsReturnedIfPathIsEmpty() {
+        Assert.That(Subject.Expand(""), Is.EqualTo(""));
+    }
+
+    [Test]
+    public void OpenCloseBracketsAreReturned() {
+        Assert.That(Subject.Expand("{}"), Is.EqualTo("{}"));
+    }
+
+    [Test]
+    public void OpenBracketIsReturned() {
+        Assert.That(Subject.Expand("{"), Is.EqualTo("{"));
+    }
+
+    [Test]
+    public void CloseBracketIsReturned() {
+        Assert.That(Subject.Expand("}"), Is.EqualTo("}"));
+    }
+
+    [Test]
+    public void WhiteSpaceIsReturned() {
+        Assert.That(Subject.Expand("    "), Is.EqualTo("    "));
+    }
+
+    [Test]
+    public void TrailingSlashIsPreserved() {
+        var actual = Subject.Expand("{ApplicationData}/");
+        var expected = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData, Environment.SpecialFolderOption.DoNotVerify) + "/";
+        Assert.That(actual, Is.EqualTo(expected));
+    }
+
+    [Test]
+    public void TrailingBackSlashIsPreserved() {
+        if (Path.DirectorySeparatorChar == '\\') {
+            var actual = Subject.Expand("{ApplicationData}\\");
+            var expected = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData, Environment.SpecialFolderOption.DoNotVerify) + "\\";
+            Assert.That(actual, Is.EqualTo(expected));
+        }
+    }
+
+    private sealed class Tunnel : MarshalByRefObject {
+        public string Format(string path) {
+            return new PathFormatter().Format(path);
+        }
+    }
+
+    [Test]
+    public void AppDomainFriendlyNameIsReplacedInPath() {
+#if NETFRAMEWORK
+        var curDomain = AppDomain.CurrentDomain;
+        var newDomain = AppDomain.CreateDomain(
+            friendlyName: "What's up? I'm a new application domain",
+            securityInfo: curDomain.Evidence,
+            appBasePath: curDomain.BaseDirectory,
+            appRelativeSearchPath: curDomain.RelativeSearchPath,
+            shadowCopyFiles: false);
+        try {
+            var tunnel = (Tunnel)newDomain.CreateInstanceAndUnwrap(typeof(Tunnel).Assembly.FullName, typeof(Tunnel).FullName);
+            var actual = tunnel.Format(@"Z:\path\{appdomain.Friendlyname}\file.txt");
+            var expected = @"Z:\path\What's up_ I'm a new application domain\file.txt";
+            Assert.That(actual, Is.EqualTo(expected));
+        }
+        finally {
+            AppDomain.Unload(newDomain);
+        }
+#endif
+    }
+
+    [Test]
+    public void AppDomainFriendlyNameIsReplacedInFileName() {
+#if NETFRAMEWORK
+        var curDomain = AppDomain.CurrentDomain;
+        var newDomain = AppDomain.CreateDomain(
+            friendlyName: "What's up? I'm a new application domain",
+            securityInfo: curDomain.Evidence,
+            appBasePath: curDomain.BaseDirectory,
+            appRelativeSearchPath: curDomain.RelativeSearchPath,
+            shadowCopyFiles: false);
+        try {
+            var tunnel = (Tunnel)newDomain.CreateInstanceAndUnwrap(typeof(Tunnel).Assembly.FullName, typeof(Tunnel).FullName);
+            var actual = tunnel.Format(@"{appdomain.Friendlyname}.txt");
+            var expected = @"What's up_ I'm a new application domain.txt";
+            Assert.That(actual, Is.EqualTo(expected));
+        }
+        finally {
+            AppDomain.Unload(newDomain);
+        }
+#endif
+    }
+
+    [Test]
+    public void ThreadNameIsReplacedInPath() {
+        var actual = default(string);
+        var thread = new Thread(_ => {
+            Thread.CurrentThread.Name = "::the THREAD::";
+            actual = Subject.Format(@"z:\some path\to\thread {THREAD.NAME}\{thread.name}.file");
+        });
+        thread.Start();
+        thread.Join();
+        var expected = @"z:\some path\to\thread __the THREAD__\__the THREAD__.file";
+        Assert.That(actual, Is.EqualTo(expected));
+    }
+
+    [Test]
+    public void ThreadNameIsReplacedAlongWithDirectorySeparatorChars() {
+        var actual = default(string);
+        var thread = new Thread(_ => {
+            Thread.CurrentThread.Name = "::the THREAD::";
+            actual = Subject.Format(@"z:\some path\to/thread {THREAD.NAME}/{thread.name}.file");
+        });
+        thread.Start();
+        thread.Join();
+        var expected = @"z:\some path\to\thread __the THREAD__\__the THREAD__.file";
+        Assert.That(actual, Is.EqualTo(expected));
+    }
+
+    [Test]
+    public void ManagedThreadIdIsReplacedInPath() {
+        var actual = default(string);
+        var expected = default(string);
+        var thread = new Thread(_ => {
+            actual = Subject.Format(@"z:\some path\to\thread {THREAD.managedthreadid}\{thread.managedthreadID}.file");
+            expected = @$"z:\some path\to\thread {Thread.CurrentThread.ManagedThreadId}\{Thread.CurrentThread.ManagedThreadId}.file";
+        });
+        thread.Start();
+        thread.Join();
+        Assert.That(actual, Is.EqualTo(expected));
+    }
+
+    [Test]
+    public void ManagedThreadIdIsReplacedInWorkingDirectoryPath() {
+        var actual = default(string);
+        var expected = default(string);
+        var thread = new Thread(_ => {
+            actual = Subject.Format(@"z:some path\to\thread {THREAD.managedthreadid}\{thread.managedthreadID}.file");
+            expected = @$"z:some path\to\thread {Thread.CurrentThread.ManagedThreadId}\{Thread.CurrentThread.ManagedThreadId}.file";
+        });
+        thread.Start();
+        thread.Join();
+        Assert.That(actual, Is.EqualTo(expected));
+    }
+
+    [Test]
+    public void SameStringIsReturnedIfThereIsNothingToReplace() {
+        var actual = Subject.Format(@"C:\path\to\file.txt");
+        var expected = @"C:\path\to\file.txt";
+        Assert.That(actual, Is.EqualTo(expected));
+    }
+
+    [Test]
+    public void CurrentDriveRootIsPreserved() {
+        if (Path.DirectorySeparatorChar != '\\') {
+            Assert.Ignore("A current-drive-rooted path is a Windows path.");
+        }
+
+        var actual = Subject.Format(@"\logs\app.log");
+
+        Assert.That(actual, Is.EqualTo(@"\logs\app.log"));
+    }
+
+    [TestCase(@"\\server\share\logs\app.log")]
+    [TestCase(@"\\?\UNC\server\share\logs\app.log")]
+    [TestCase(@"\\?\C:\logs\app.log")]
+    public void UncAndExtendedWindowsRootsArePreserved(string path) {
+        if (Path.DirectorySeparatorChar != '\\') {
+            Assert.Ignore("UNC paths are Windows paths.");
+        }
+
+        var actual = Subject.Format(path);
+
+        Assert.That(actual, Is.EqualTo(path));
+    }
+
+    [Test]
+    public void TokensInUncRootAreStillFormatted() {
+        if (Path.DirectorySeparatorChar != '\\') {
+            Assert.Ignore("UNC paths are Windows paths.");
+        }
+
+        var actual = Subject.Format($@"\\{{thread.managedthreadid}}\share\app.log");
+        var expected = $@"\\{Thread.CurrentThread.ManagedThreadId}\share\app.log";
+
+        Assert.That(actual, Is.EqualTo(expected));
+    }
+
+    [Test]
+    public void UnixAbsoluteRootIsPreserved() {
+        if (Path.DirectorySeparatorChar != '/') {
+            Assert.Ignore("A Unix absolute path requires a Unix runtime.");
+        }
+
+        var actual = Subject.Format("/var/log/app.log");
+
+        Assert.That(actual, Is.EqualTo("/var/log/app.log"));
+    }
+
+    [TestCase("{Thread.ManagedThreadId}-{thread.managedthreadid}.log", "-")]
+    [TestCase("{THREAD.MANAGEDTHREADID}{Thread.ManagedThreadId}.log", "")]
+    public void EveryRepeatedMixedCaseTokenIsReplaced(string path, string separator) {
+        var id = Thread.CurrentThread.ManagedThreadId;
+
+        Assert.That(Subject.Format(path), Is.EqualTo($"{id}{separator}{id}.log"));
+    }
+
+    [Test]
+    public void RepeatedTokenValuesAreResolvedOnceWithoutExpandingInsertedTokens() {
+        var firstCalls = 0;
+        var secondCalls = 0;
+        var args = new Dictionary<string, Func<object>> {
+            ["first"] = () => { firstCalls++; return "{second}/value"; },
+            ["second"] = () => { secondCalls++; return "expanded"; }
+        };
+        var format = typeof(PathFormatter).GetMethod("Format", BindingFlags.Static | BindingFlags.NonPublic);
+        var path = Path.Combine("{first}-{FIRST}", "{first}-{second}.log");
+        var actual = (string)format.Invoke(null, [path, args]);
+        var expected = Path.Combine("{second}_value-{second}_value", "{second}_value-expanded.log");
+
+        Assert.Multiple(() => {
+            Assert.That(actual, Is.EqualTo(expected));
+            Assert.That(firstCalls, Is.EqualTo(1));
+            Assert.That(secondCalls, Is.EqualTo(1));
+        });
+    }
+
+    [Test]
+    public void NullReturnsEmptyString() {
+        Assert.That(Subject.Format(null), Is.EqualTo(""));
+    }
+
+    [Test]
+    public void EmptyStringIsReturned() {
+        Assert.That(Subject.Format(""), Is.EqualTo(""));
+    }
+}
