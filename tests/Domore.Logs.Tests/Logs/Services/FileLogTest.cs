@@ -427,7 +427,10 @@ internal sealed class FileLogTest {
                 log[f].config.default.format = {{sev}}
             ");
         Log.Critical("Some data that will be in a dated log");
-        Thread.Sleep(100);
+        var rotated = SpinWait.SpinUntil(
+            () => Directory.GetFiles(fileDir, fileSearchPattern, SearchOption.TopDirectoryOnly).Length == 1,
+            TimeSpan.FromSeconds(5));
+        Assert.That(rotated, Is.True, "The first message should rotate before the file-size limit changes.");
         Config = "log[f].service.FileSizeLimit = 1000";
         Log.Critical("More data that will be in the original log");
         Logging.Complete();
