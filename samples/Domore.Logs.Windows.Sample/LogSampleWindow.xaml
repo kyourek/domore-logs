@@ -11,7 +11,7 @@
       The control is styled entirely through dependency properties. Entries of
       each severity get their own brush; an unset brush uses Foreground.
     -->
-    <Style x:Key="DarkLogStyle" TargetType="logs:LogControl">
+    <Style x:Key="DarkLogStyle" TargetType="logs:LogsControl">
       <Setter Property="Background" Value="#1E1E1E"/>
       <Setter Property="Foreground" Value="#D4D4D4"/>
       <Setter Property="LogDebugForeground" Value="#7F7F7F"/>
@@ -94,7 +94,7 @@
         <Button Content="Log Unicode and a long line" Click="Unicode_Click"/>
       </StackPanel>
     </ScrollViewer>
-    <logs:LogControl x:Name="LogView" FontSize="13" BorderThickness="1,0,0,0"
+    <logs:LogsControl x:Name="LogView" FontSize="13" BorderThickness="1,0,0,0"
                      BorderBrush="{DynamicResource {x:Static SystemColors.ActiveBorderBrushKey}}"/>
   </DockPanel>
 </Window>

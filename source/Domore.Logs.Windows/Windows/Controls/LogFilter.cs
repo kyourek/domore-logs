@@ -27,8 +27,7 @@ internal sealed class LogFilter {
         var hasTypes = types is not null;
         if (hasTypes) {
             foreach (var type in types) {
-                var typeIsNull = type is null;
-                if (typeIsNull) {
+                if (type is null) {
                     continue;
                 }
                 Types.Add(type);
@@ -37,8 +36,7 @@ internal sealed class LogFilter {
         var hasNames = names is not null;
         if (hasNames) {
             foreach (var name in names) {
-                var nameIsNull = name is null;
-                if (nameIsNull) {
+                if (name is null) {
                     continue;
                 }
                 Names.Add(name);
@@ -48,16 +46,13 @@ internal sealed class LogFilter {
 
     public LogSeverity ThresholdFor(Type type) {
         var matches = type is not null && Matches(type, type.Name);
-        return matches
-            ? Threshold
-            : LogSeverity.None;
+        return matches ? Threshold : LogSeverity.None;
     }
 
     public bool Includes(LogSeverity severity, Type type, string name) {
-        var severityIsShown =
-            Threshold != LogSeverity.None &&
-            severity != LogSeverity.None &&
-            Threshold <= severity;
+        var severityIsShown = Threshold != LogSeverity.None &&
+                              severity != LogSeverity.None &&
+                              Threshold <= severity;
         return severityIsShown && Matches(type, name);
     }
 }

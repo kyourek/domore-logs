@@ -10,7 +10,7 @@ using System.Windows.Threading;
 namespace Domore.Windows;
 
 /// <summary>
-/// Shows a <see cref="Controls.LogControl"/> receiving a simulated workload, with settings for its
+/// Shows a <see cref="Controls.LogsControl"/> receiving a simulated workload, with settings for its
 /// threshold, source filter, line limit, font, and theme.
 /// </summary>
 public sealed partial class LogSampleWindow {

@@ -231,7 +231,7 @@ code more complicated, such as when the field must be `volatile`.
   - `Domore.Logs.Windows/` contains the `Domore.Logs.Windows` WPF library,
     which overrides the shared targets with `net462`, `net48`,
     `net8.0-windows`, and `net10.0-windows`.
-    - `Windows/Controls/` holds the public `LogControl` and its internal
+    - `Windows/Controls/` holds the public `LogsControl` and its internal
       subscription, filter, line buffer, glyph table, line formatter, and
       retained glyph-run presenter.
     - `Themes/Generic.xaml` merges the default style from
@@ -240,7 +240,7 @@ code more complicated, such as when the field must be `volatile`.
   references the `Domore.Logs` and `Domore.Logs.Conf` projects. Its build settings target `net40`,
   `net462`, and `net10.0`.
 - `samples/Domore.Logs.Windows.Sample/` is a non-packable WPF application
-  targeting `net10.0-windows` that shows `LogControl` with a simulated
+  targeting `net10.0-windows` that shows `LogsControl` with a simulated
   workload and live settings for its threshold, filters, line limit, font,
   and theme.
 - `tests/` contains non-packable NUnit test projects:

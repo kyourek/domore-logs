@@ -1,13 +1,13 @@
 # Domore.Logs.Windows
 
-WPF presentation for Domore.Logs. The package provides `LogControl`, which
+WPF presentation for Domore.Logs. The package provides `LogsControl`, which
 displays entries written through `ILog` as they are logged.
 
 ```xml
 <Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:logs="clr-namespace:Domore.Windows.Controls;assembly=Domore.Logs.Windows">
-  <logs:LogControl LogThreshold="Debug" LogLineLimit="5000" />
+  <logs:LogsControl LogThreshold="Debug" LogLineLimit="5000" />
 </Window>
 ```
 
@@ -54,7 +54,7 @@ null, the system highlight color is drawn at 30% opacity.
 `LogScrollViewerStyle` styles the scroll viewer.
 
 ```xml
-<logs:LogControl Background="#1E1E1E"
+<logs:LogsControl Background="#1E1E1E"
                  Foreground="Gainsboro"
                  FontSize="12"
                  LogInfoForeground="LightSkyBlue"

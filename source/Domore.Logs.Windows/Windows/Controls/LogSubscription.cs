@@ -36,8 +36,7 @@ internal sealed class LogSubscription : ILogSubscription {
     }
 
     private void QueueFlush() {
-        var shutdownStarted = Dispatcher.HasShutdownStarted;
-        if (shutdownStarted) {
+        if (Dispatcher.HasShutdownStarted) {
             return;
         }
         /*
@@ -64,8 +63,7 @@ internal sealed class LogSubscription : ILogSubscription {
             }
         }
         set {
-            var valueIsNull = value is null;
-            if (valueIsNull) {
+            if (value is null) {
                 throw new ArgumentNullException(nameof(Filter));
             }
             lock (Locker) {
@@ -109,8 +107,7 @@ internal sealed class LogSubscription : ILogSubscription {
     }
 
     public void Receive(ILogEntry entry) {
-        var entryIsNull = entry is null;
-        if (entryIsNull) {
+        if (entry is null) {
             return;
         }
         bool queueFlush;

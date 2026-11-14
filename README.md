@@ -34,12 +34,12 @@ Severity thresholds, per-log formats, console colors, custom formatters for your
 
 ## WPF
 
-`Domore.Logs.Windows` provides `LogControl`, a WPF control that displays log
+`Domore.Logs.Windows` provides `LogsControl`, a WPF control that displays log
 entries as they stream in. It draws only visible lines, retains a bounded number
 of lines, and filters by severity threshold, log type, and log name.
 
 ```xml
-<logs:LogControl xmlns:logs="clr-namespace:Domore.Windows.Controls;assembly=Domore.Logs.Windows"
+<logs:LogsControl xmlns:logs="clr-namespace:Domore.Windows.Controls;assembly=Domore.Logs.Windows"
                  LogThreshold="Debug" />
 ```
 

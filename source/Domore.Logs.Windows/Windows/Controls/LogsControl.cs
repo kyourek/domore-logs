@@ -29,11 +29,11 @@ namespace Domore.Windows.Controls;
 /// Page Up, Page Down, Home, and End scroll the view.
 /// </para>
 /// </remarks>
-public sealed class LogControl : Control {
-    static LogControl() {
+public sealed class LogsControl : Control {
+    static LogsControl() {
         DefaultStyleKeyProperty.OverrideMetadata(
-            forType: typeof(LogControl),
-            typeMetadata: new FrameworkPropertyMetadata(typeof(LogControl)));
+            forType: typeof(LogsControl),
+            typeMetadata: new FrameworkPropertyMetadata(typeof(LogsControl)));
     }
 
     private const string ScrollViewerTemplatePartName = "PART_LogScrollViewer";
@@ -45,17 +45,17 @@ public sealed class LogControl : Control {
         return DependencyProperty.Register(
             name: name,
             propertyType: typeof(Brush),
-            ownerType: typeof(LogControl),
+            ownerType: typeof(LogsControl),
             typeMetadata: new PropertyMetadata(
                 defaultValue: null,
-                propertyChangedCallback: (s, e) => ((LogControl)s).Presenter.InvalidateLines()));
+                propertyChangedCallback: (s, e) => ((LogsControl)s).Presenter.InvalidateLines()));
     }
 
-    private void LogControl_Loaded(object sender, RoutedEventArgs e) {
+    private void LogsControl_Loaded(object sender, RoutedEventArgs e) {
         Attach();
     }
 
-    private void LogControl_Unloaded(object sender, RoutedEventArgs e) {
+    private void LogsControl_Unloaded(object sender, RoutedEventArgs e) {
         Detach();
     }
 
@@ -211,10 +211,10 @@ public sealed class LogControl : Control {
     public static readonly DependencyProperty LogThresholdProperty = DependencyProperty.Register(
         name: nameof(LogThreshold),
         propertyType: typeof(LogSeverity),
-        ownerType: typeof(LogControl),
+        ownerType: typeof(LogsControl),
         typeMetadata: new PropertyMetadata(
             defaultValue: LogSeverity.Info,
-            propertyChangedCallback: (s, e) => ((LogControl)s).UpdateFilter()));
+            propertyChangedCallback: (s, e) => ((LogsControl)s).UpdateFilter()));
 
     /// <summary>
     /// Gets or sets the lowest severity of entries that are displayed.
@@ -237,10 +237,10 @@ public sealed class LogControl : Control {
     public static readonly DependencyProperty LogTypesProperty = DependencyProperty.Register(
         name: nameof(LogTypes),
         propertyType: typeof(IEnumerable<Type>),
-        ownerType: typeof(LogControl),
+        ownerType: typeof(LogsControl),
         typeMetadata: new PropertyMetadata(
             defaultValue: null,
-            propertyChangedCallback: (s, e) => ((LogControl)s).FilterCollectionChanged(e.OldValue, e.NewValue)));
+            propertyChangedCallback: (s, e) => ((LogsControl)s).FilterCollectionChanged(e.OldValue, e.NewValue)));
 
     /// <summary>
     /// Gets or sets the log types whose entries are displayed.
@@ -265,10 +265,10 @@ public sealed class LogControl : Control {
     public static readonly DependencyProperty LogNamesProperty = DependencyProperty.Register(
         name: nameof(LogNames),
         propertyType: typeof(IEnumerable<string>),
-        ownerType: typeof(LogControl),
+        ownerType: typeof(LogsControl),
         typeMetadata: new PropertyMetadata(
             defaultValue: null,
-            propertyChangedCallback: (s, e) => ((LogControl)s).FilterCollectionChanged(e.OldValue, e.NewValue)));
+            propertyChangedCallback: (s, e) => ((LogsControl)s).FilterCollectionChanged(e.OldValue, e.NewValue)));
 
     /// <summary>
     /// Gets or sets the log names whose entries are displayed.
@@ -293,11 +293,11 @@ public sealed class LogControl : Control {
     public static readonly DependencyProperty LogLineLimitProperty = DependencyProperty.Register(
         name: nameof(LogLineLimit),
         propertyType: typeof(int),
-        ownerType: typeof(LogControl),
+        ownerType: typeof(LogsControl),
         typeMetadata: new PropertyMetadata(
             defaultValue: LogLineLimitDefault,
             propertyChangedCallback: (s, e) => {
-                var self = (LogControl)s;
+                var self = (LogsControl)s;
                 var limit = (int)e.NewValue;
                 self.Subscription.PendingLimit = limit;
                 self.Presenter.SetLineLimit(limit);
@@ -406,10 +406,10 @@ public sealed class LogControl : Control {
     public static readonly DependencyProperty LogSelectionBackgroundProperty = DependencyProperty.Register(
         name: nameof(LogSelectionBackground),
         propertyType: typeof(Brush),
-        ownerType: typeof(LogControl),
+        ownerType: typeof(LogsControl),
         typeMetadata: new PropertyMetadata(
             defaultValue: null,
-            propertyChangedCallback: (s, e) => ((LogControl)s).Presenter.InvalidateArrange()));
+            propertyChangedCallback: (s, e) => ((LogsControl)s).Presenter.InvalidateArrange()));
 
     /// <summary>
     /// Gets or sets the brush drawn behind selected rows.
@@ -429,7 +429,7 @@ public sealed class LogControl : Control {
     public static readonly DependencyProperty LogScrollViewerStyleProperty = DependencyProperty.Register(
         name: nameof(LogScrollViewerStyle),
         propertyType: typeof(Style),
-        ownerType: typeof(LogControl),
+        ownerType: typeof(LogsControl),
         typeMetadata: new PropertyMetadata(
             defaultValue: null));
 
@@ -448,7 +448,7 @@ public sealed class LogControl : Control {
     /// <summary>
     /// Initializes a new log display control.
     /// </summary>
-    public LogControl() {
+    public LogsControl() {
         Presenter = new LogPresenter(this, LogLineLimitDefault);
         Presenter.SetBinding(MarginProperty, new Binding(nameof(Padding)) {
             Source = this
@@ -459,8 +459,8 @@ public sealed class LogControl : Control {
             filter: new LogFilter(LogSeverity.Info, null, null),
             pendingLimit: LogLineLimitDefault);
         CommandBindings.Add(new CommandBinding(ApplicationCommands.Copy, Copy));
-        Loaded += LogControl_Loaded;
-        Unloaded += LogControl_Unloaded;
+        Loaded += LogsControl_Loaded;
+        Unloaded += LogsControl_Unloaded;
     }
 
     /// <inheritdoc/>

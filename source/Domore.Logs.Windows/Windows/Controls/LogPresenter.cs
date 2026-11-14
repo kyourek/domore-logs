@@ -36,7 +36,7 @@ internal sealed class LogPresenter : FrameworkElement, IScrollInfo {
     private const long RebaseDistance = 10000;
     private const double SelectionOpacity = 0.3;
 
-    private readonly LogControl Owner;
+    private readonly LogsControl Owner;
     private readonly DrawingVisual Selection = new();
     private readonly ContainerVisual Content = new();
     private readonly Dictionary<long, DrawingVisual> Realized = [];
@@ -65,8 +65,7 @@ internal sealed class LogPresenter : FrameworkElement, IScrollInfo {
     private double MaxVerticalOffset => Math.Max(0, ExtentHeight - ViewportHeight);
 
     private static double Clamp(double value, double max) {
-        var valueIsNaN = double.IsNaN(value);
-        if (valueIsNaN) {
+        if (double.IsNaN(value)) {
             return 0;
         }
         return Math.Max(0, Math.Min(value, max));
@@ -254,7 +253,9 @@ internal sealed class LogPresenter : FrameworkElement, IScrollInfo {
      */
     private bool PreservesOrder(int end) {
         var next = TextBuffer[end];
-        return char.IsWhiteSpace(TextBuffer[end - 1]) && char.IsLetter(next) && IsRightToLeftLetter(next) == false;
+        return char.IsWhiteSpace(TextBuffer[end - 1]) &&
+               char.IsLetter(next) &&
+               IsRightToLeftLetter(next) == false;
     }
 
     /*
@@ -510,7 +511,7 @@ internal sealed class LogPresenter : FrameworkElement, IScrollInfo {
     public double VerticalOffset { get; private set; }
     public ScrollViewer ScrollOwner { get; set; }
 
-    public LogPresenter(LogControl owner, int lineLimit) {
+    public LogPresenter(LogsControl owner, int lineLimit) {
         Owner = owner ?? throw new ArgumentNullException(nameof(owner));
         Lines = new LogLineBuffer(lineLimit);
         ClipToBounds = true;

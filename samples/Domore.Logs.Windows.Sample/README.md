@@ -1,6 +1,6 @@
 # Domore.Logs.Windows sample
 
-A small WPF application that shows `LogControl` displaying a live, simulated
+A small WPF application that shows `LogsControl` displaying a live, simulated
 workload. Run it on Windows with .NET 10:
 
 ```powershell

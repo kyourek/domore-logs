@@ -18,7 +18,7 @@ using System.Windows.Threading;
 namespace Domore.Windows.Controls;
 
 [TestFixture]
-public sealed class LogControlTest {
+public sealed class LogsControlTest {
     private static readonly ILog FirstLog = Logging.For(typeof(FirstType));
     private static readonly ILog SecondLog = Logging.For(typeof(SecondType));
     private static readonly ILog ThirdLog = Logging.For(typeof(ThirdType));
@@ -36,7 +36,7 @@ public sealed class LogControlTest {
      * Pending entries are flushed at background priority, which runs before
      * the context-idle continuation of this yield.
      */
-    private static async Task<string[]> Lines(LogControl control) {
+    private static async Task<string[]> Lines(LogsControl control) {
         await Dispatcher.Yield(DispatcherPriority.ContextIdle);
         var lines = control.Presenter.Lines;
         return Enumerable.Range(0, lines.Count).Select(i => LogLineFormatter.Format(lines[i])).ToArray();
@@ -46,8 +46,8 @@ public sealed class LogControlTest {
         return lines.Select(line => line.Substring(line.IndexOf(' ') + 1)).ToArray();
     }
 
-    private static LogControl Attached(Action<LogControl> configure = null) {
-        var control = new LogControl();
+    private static LogsControl Attached(Action<LogsControl> configure = null) {
+        var control = new LogsControl();
         configure?.Invoke(control);
         Assert.That(control.Attach(), Is.True);
         return control;
@@ -73,7 +73,7 @@ public sealed class LogControlTest {
     /*
      * Returns the glyph runs of every realized line, in drawing order.
      */
-    private static GlyphRun[] GlyphRuns(LogControl control) {
+    private static GlyphRun[] GlyphRuns(LogsControl control) {
         var content = VisualTreeHelper.GetChild(control.Presenter, 1);
         return Enumerable.Range(0, VisualTreeHelper.GetChildrenCount(content))
             .Select(i => VisualTreeHelper.GetChild(content, i))
@@ -81,7 +81,7 @@ public sealed class LogControlTest {
             .ToArray();
     }
 
-    private static void Layout(LogControl control, double width, double height) {
+    private static void Layout(LogsControl control, double width, double height) {
         var initialized = control.IsInitialized;
         if (initialized == false) {
             control.BeginInit();
@@ -201,12 +201,12 @@ public sealed class LogControlTest {
         return capture;
     }
 
-    private static string[] CopiedMessages(LogControl control) {
+    private static string[] CopiedMessages(LogsControl control) {
         var lines = control.Presenter.CopyText().Split(new[] { Environment.NewLine }, StringSplitOptions.RemoveEmptyEntries);
         return Messages(lines);
     }
 
-    private static async Task<LogControl> Scrollable(int count) {
+    private static async Task<LogsControl> Scrollable(int count) {
         var control = Attached();
         Layout(control, 400, 100);
         for (var i = 0; i < count; i++) {
@@ -381,7 +381,7 @@ public sealed class LogControlTest {
     [Test]
     public void LineLimitMustBePositive() {
         WpfTestThread.Run(() => {
-            var control = new LogControl();
+            var control = new LogsControl();
             Assert.That(() => control.LogLineLimit = 0, Throws.ArgumentException);
             return Task.CompletedTask;
         });
@@ -521,7 +521,7 @@ public sealed class LogControlTest {
      * lines differ only in their text and not in their header's time.
      */
     private static double WidthOf(string text) {
-        var control = new LogControl { FontFamily = new FontFamily("Arial") };
+        var control = new LogsControl { FontFamily = new FontFamily("Arial") };
         LogLineFormatter.Split(new MockLogEntry { LogList = [text] }, control.Presenter.Lines);
         control.Presenter.LinesAdded();
         Layout(control, 600, 100);
@@ -561,7 +561,7 @@ public sealed class LogControlTest {
             run.GlyphIndices.Count)));
     }
 
-    private static LogControl ArialAttached() {
+    private static LogsControl ArialAttached() {
         var typeface = new Typeface(new FontFamily("Arial"), FontStyles.Normal, FontWeights.Normal, FontStretches.Normal);
         var hasArial = typeface.TryGetGlyphTypeface(out _);
         if (hasArial == false) {
@@ -587,7 +587,7 @@ public sealed class LogControlTest {
      * Returns the glyph runs of text formatted once by WPF, as a reference for
      * the pieces the presenter draws for a long line.
      */
-    private static GlyphRun[] UnsplitRuns(LogControl control, string text) {
+    private static GlyphRun[] UnsplitRuns(LogsControl control, string text) {
         var formattedText = new FormattedText(
             text,
             CultureInfo.CurrentUICulture,
@@ -931,7 +931,7 @@ public sealed class LogControlTest {
     [Test]
     public void CopyCommandIsAvailableAndControlTakesFocus() {
         WpfTestThread.Run(() => {
-            var control = new LogControl();
+            var control = new LogsControl();
             Assert.That(ApplicationCommands.Copy.CanExecute(null, control), Is.True);
             Assert.That(control.Focusable, Is.True);
             return Task.CompletedTask;
@@ -948,7 +948,7 @@ public sealed class LogControlTest {
      * In a horizontal StackPanel the control is measured without a width limit,
      * so it must size itself to the text its presenter realizes while arranging.
      */
-    private static void AssertSizedToText(LogControl control) {
+    private static void AssertSizedToText(LogsControl control) {
         var presenter = control.Presenter;
         Assert.That(presenter.ExtentWidth, Is.GreaterThan(0), "No text was realized.");
         Assert.That(presenter.ViewportWidth, Is.EqualTo(presenter.ExtentWidth).Within(0.5));
