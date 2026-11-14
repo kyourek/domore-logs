@@ -579,21 +579,54 @@ public sealed class LogControlTest {
             Layout(control, 600, 100);
             var text = LogLineFormatter.Format(control.Presenter.Lines[0]);
             Assert.That(text.Length, Is.GreaterThan(5000).And.LessThan(9000));
-            var formattedText = new FormattedText(
-                text,
-                CultureInfo.CurrentUICulture,
-                FlowDirection.LeftToRight,
-                new Typeface(control.FontFamily, control.FontStyle, control.FontWeight, control.FontStretch),
-                control.FontSize,
-                Brushes.Black,
-                VisualTreeHelper.GetDpi(control.Presenter).PixelsPerDip) {
-                MaxLineCount = 1
-            };
-            var reference = new DrawingGroup();
-            using (var drawingContext = reference.Open()) {
-                drawingContext.DrawText(formattedText, new Point(0, 0));
+            Assert.That(Describe(GlyphRuns(control)), Is.EqualTo(Describe(UnsplitRuns(control, text))));
+        });
+    }
+
+    /*
+     * Returns the glyph runs of text formatted once by WPF, as a reference for
+     * the pieces the presenter draws for a long line.
+     */
+    private static GlyphRun[] UnsplitRuns(LogControl control, string text) {
+        var formattedText = new FormattedText(
+            text,
+            CultureInfo.CurrentUICulture,
+            FlowDirection.LeftToRight,
+            new Typeface(control.FontFamily, control.FontStyle, control.FontWeight, control.FontStretch),
+            control.FontSize,
+            Brushes.Black,
+            VisualTreeHelper.GetDpi(control.Presenter).PixelsPerDip) {
+            MaxLineCount = 1
+        };
+        var reference = new DrawingGroup();
+        using (var drawingContext = reference.Open()) {
+            drawingContext.DrawText(formattedText, new Point(0, 0));
+        }
+        return GlyphRuns(reference).ToArray();
+    }
+
+    /*
+     * The line starts with a header of 27 characters, so a prefix of 8,163
+     * characters puts the break between the base emoji and its modifier.
+     */
+    [TestCase(8161)]
+    [TestCase(8163)]
+    [TestCase(8165)]
+    public void EmojiModifierStaysWithItsBaseAtAPieceBoundary(int prefix) {
+        WpfTestThread.Run(async () => {
+            var typeface = new Typeface(new FontFamily("Segoe UI Emoji"), FontStyles.Normal, FontWeights.Normal, FontStretches.Normal);
+            if (typeface.TryGetGlyphTypeface(out _) == false) {
+                Assert.Ignore("Segoe UI Emoji is not installed.");
             }
-            Assert.That(Describe(GlyphRuns(control)), Is.EqualTo(Describe(GlyphRuns(reference))));
+            var control = Attached(c => c.FontFamily = new FontFamily("Segoe UI Emoji"));
+            FirstLog.Info(new string('x', prefix) + char.ConvertFromUtf32(0x1F44D) + char.ConvertFromUtf32(0x1F3FD) + "END");
+            await Lines(control);
+            Layout(control, 600, 100);
+            var text = LogLineFormatter.Format(control.Presenter.Lines[0]);
+            Assert.That(text.Length, Is.InRange(8192, 9500));
+            var glyphs = GlyphRuns(control).Sum(run => run.GlyphIndices.Count);
+            var unsplit = UnsplitRuns(control, text).Sum(run => run.GlyphIndices.Count);
+            Assert.That(glyphs, Is.EqualTo(unsplit), "The modifier was shaped apart from its base.");
         });
     }
 

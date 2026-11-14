@@ -199,7 +199,31 @@ internal sealed class LogPresenter : FrameworkElement, IScrollInfo {
         }
     }
 
-    private static bool CanBreakBetween(char previous, char next) {
+    private static bool IsRegionalIndicator(int codePoint) {
+        return codePoint >= 0x1F1E6 && codePoint <= 0x1F1FF;
+    }
+
+    /*
+     * Returns the supplementary code point that starts at index, or -1 when the
+     * characters there are not a surrogate pair inside the first length.
+     */
+    private int CodePointAt(int index, int length) {
+        bool inRange = index >= 0 && index + 1 < length;
+        bool isPair = inRange && char.IsHighSurrogate(TextBuffer[index]) && char.IsLowSurrogate(TextBuffer[index + 1]);
+        return isPair
+            ? char.ConvertToUtf32(TextBuffer[index], TextBuffer[index + 1])
+            : -1;
+    }
+
+    /*
+     * Returns whether text may be split before TextBuffer[end] without
+     * separating a character or a cluster that must be shaped together: a
+     * surrogate pair, a combining mark, a joined sequence, a skin-tone
+     * modifier, the second half of a flag, or a tag character of a flag.
+     */
+    private bool CanBreakAt(int end, int length) {
+        var previous = TextBuffer[end - 1];
+        var next = TextBuffer[end];
         bool splitsPair = char.IsLowSurrogate(next);
         bool followsJoiner = previous == ZeroWidthJoiner;
         var category = char.GetUnicodeCategory(next);
@@ -208,7 +232,12 @@ internal sealed class LogPresenter : FrameworkElement, IScrollInfo {
             category == UnicodeCategory.SpacingCombiningMark ||
             category == UnicodeCategory.EnclosingMark ||
             category == UnicodeCategory.Format;
-        return splitsPair == false && followsJoiner == false && continuesCluster == false;
+        var codePoint = CodePointAt(end, length);
+        bool isModifier = codePoint >= 0x1F3FB && codePoint <= 0x1F3FF;
+        bool isTag = codePoint >= 0xE0020 && codePoint <= 0xE007F;
+        bool completesFlag = IsRegionalIndicator(codePoint) && IsRegionalIndicator(CodePointAt(end - 2, length));
+        bool extendsSequence = isModifier || isTag || completesFlag;
+        return splitsPair == false && followsJoiner == false && continuesCluster == false && extendsSequence == false;
     }
 
     private static bool IsRightToLeftLetter(char c) {
@@ -253,7 +282,7 @@ internal sealed class LogPresenter : FrameworkElement, IScrollInfo {
             }
         }
         for (var end = limit; end > start; end--) {
-            bool canBreak = CanBreakBetween(TextBuffer[end - 1], TextBuffer[end]);
+            bool canBreak = CanBreakAt(end, length);
             if (canBreak) {
                 return end;
             }
