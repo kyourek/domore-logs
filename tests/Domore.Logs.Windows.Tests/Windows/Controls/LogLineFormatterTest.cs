@@ -1,17 +1,21 @@
 ﻿using Domore.Logs;
 using Domore.Windows.Controls.Mocks;
 using NUnit.Framework;
-using System.Collections.Generic;
 using System.Linq;
 
 namespace Domore.Windows.Controls;
 
 [TestFixture]
 public sealed class LogLineFormatterTest {
-    private static string[] Format(MockLogEntry entry) {
-        var lines = new List<LogLine>();
+    private static LogLineBuffer Split(MockLogEntry entry, int limit = 100) {
+        var lines = new LogLineBuffer(limit);
         LogLineFormatter.Split(entry, lines);
-        return lines.Select(LogLineFormatter.Format).ToArray();
+        return lines;
+    }
+
+    private static string[] Format(MockLogEntry entry, int limit = 100) {
+        var lines = Split(entry, limit);
+        return Enumerable.Range(0, lines.Count).Select(i => LogLineFormatter.Format(lines[i])).ToArray();
     }
 
     [Test]
@@ -60,11 +64,16 @@ public sealed class LogLineFormatterTest {
     }
 
     [Test]
+    public void SplitKeepsNewestLinesWithinBufferLimit() {
+        var entry = new MockLogEntry { LogList = ["one", "two", "three" + (char)10 + "four"] };
+        Assert.That(Format(entry, limit: 2), Is.EqualTo(new[] { "  three", "  four" }));
+    }
+
+    [Test]
     public void WriteGrowsBufferForLongLines() {
         var message = new string('x', 5000);
         var entry = new MockLogEntry { LogList = [message] };
-        var lines = new List<LogLine>();
-        LogLineFormatter.Split(entry, lines);
+        var lines = Split(entry);
         var buffer = new char[8];
         var length = LogLineFormatter.Write(lines[0], ref buffer);
         Assert.That(new string(buffer, 0, length), Is.EqualTo("01:02:03.045 inf Mock " + message));

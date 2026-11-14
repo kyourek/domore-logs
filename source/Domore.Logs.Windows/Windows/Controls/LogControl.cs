@@ -29,7 +29,6 @@ public sealed class LogControl : Control {
     private const string ScrollViewerTemplatePartName = "PART_ScrollViewer";
     private const int DefaultLineLimit = 10000;
 
-    private readonly List<LogLine> DeliveredLines = [];
     private ScrollViewer ScrollViewerPart;
 
     private static DependencyProperty RegisterForeground(string name) {
@@ -74,19 +73,19 @@ public sealed class LogControl : Control {
 
     private void Deliver(IReadOnlyCollection<ILogEntry> entries) {
         var filter = Subscription.Filter;
+        var added = false;
         foreach (var entry in entries) {
             /*
              * The filter may have changed while the entry was pending.
              */
             bool included = filter.Includes(entry.LogSeverity, entry.LogType, entry.LogName);
             if (included) {
-                LogLineFormatter.Split(entry, DeliveredLines);
+                LogLineFormatter.Split(entry, Presenter.Lines);
+                added = true;
             }
         }
-        bool hasLines = DeliveredLines.Count > 0;
-        if (hasLines) {
-            Presenter.Append(DeliveredLines);
-            DeliveredLines.Clear();
+        if (added) {
+            Presenter.LinesAdded();
         }
     }
 

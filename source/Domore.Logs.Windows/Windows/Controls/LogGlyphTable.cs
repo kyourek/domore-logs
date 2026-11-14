@@ -26,9 +26,22 @@ internal sealed class LogGlyphTable {
         public double[] Advances { get; } = new double[PageSize];
     }
 
+    /*
+     * Positioning glyphs one per character is only correct for text that
+     * needs no shaping, reordering, or mark positioning, even when the font
+     * maps every character. Latin, IPA, spacing modifier letters, and common
+     * punctuation qualify. Other characters, including surrogates, marks,
+     * and bidirectional controls, are left to WPF text layout.
+     */
+    private static bool IsSimple(char c) {
+        bool basic = c >= 0x0020 && c < 0x0300;
+        bool punctuation = (c >= 0x2010 && c <= 0x2027) || (c >= 0x2030 && c <= 0x205E);
+        return basic || punctuation;
+    }
+
     private byte Resolve(Page page, int slot, char c) {
-        bool isSurrogate = char.IsSurrogate(c);
-        if (isSurrogate) {
+        bool requiresLayout = IsSimple(c) == false;
+        if (requiresLayout) {
             return Unmapped;
         }
         bool mapped = CharacterMap.TryGetValue(c, out var index);

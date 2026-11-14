@@ -6,13 +6,30 @@ namespace Domore.Windows.Controls;
 
 [TestFixture]
 public sealed class LogGlyphTableTest {
-    private static LogGlyphTable Table(double emSize) {
-        var typeface = new Typeface(new FontFamily("Consolas"), FontStyles.Normal, FontWeights.Normal, FontStretches.Normal);
+    private static LogGlyphTable Table(double emSize, string fontFamily = "Consolas") {
+        var typeface = new Typeface(new FontFamily(fontFamily), FontStyles.Normal, FontWeights.Normal, FontStretches.Normal);
         bool hasGlyphTypeface = typeface.TryGetGlyphTypeface(out var glyphTypeface);
         if (hasGlyphTypeface == false) {
-            Assert.Ignore("Consolas is not installed.");
+            Assert.Ignore(fontFamily + " is not installed.");
         }
         return new LogGlyphTable(glyphTypeface, emSize);
+    }
+
+    [TestCase(0x0633, TestName = "ArabicLetterRequiresShaping")]
+    [TestCase(0x05D0, TestName = "HebrewLetterRequiresBidiLayout")]
+    [TestCase(0x0301, TestName = "CombiningMarkRequiresPositioning")]
+    [TestCase(0x200F, TestName = "BidiControlRequiresLayout")]
+    public void CharactersRequiringLayoutAreUnmappedEvenWhenFontHasThem(int codePoint) {
+        var table = Table(12, "Arial");
+        Assert.That(table.TryGet((char)codePoint, out _, out _), Is.False);
+    }
+
+    [TestCase(0x0061)]
+    [TestCase(0x00E9)]
+    [TestCase(0x2014)]
+    public void SimpleCharactersRemainMapped(int codePoint) {
+        var table = Table(12, "Arial");
+        Assert.That(table.TryGet((char)codePoint, out _, out _), Is.True);
     }
 
     [Test]

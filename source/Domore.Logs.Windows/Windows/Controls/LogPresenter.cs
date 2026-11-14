@@ -25,6 +25,8 @@ namespace Domore.Windows.Controls;
  */
 internal sealed class LogPresenter : FrameworkElement, IScrollInfo {
     private const int MaxGlyphsPerRun = 1024;
+    private const int MaxCharactersPerPiece = 4096;
+    private const char ZeroWidthJoiner = (char)0x200D;
     private const long RebaseDistance = 10000;
 
     private readonly LogControl Owner;
@@ -39,6 +41,7 @@ internal sealed class LogPresenter : FrameworkElement, IScrollInfo {
     private bool FontIsCurrent;
     private bool FollowsEnd = true;
     private bool MeasuredUnbounded;
+    private long OffsetFirstSerial;
     private long BaseSerial;
     private Typeface Typeface;
     private LogGlyphTable Glyphs;
@@ -105,7 +108,9 @@ internal sealed class LogPresenter : FrameworkElement, IScrollInfo {
         Reusable.Clear();
     }
 
-    private void LinesChanged(int removed) {
+    private void LinesChanged() {
+        var removed = Lines.FirstSerial - OffsetFirstSerial;
+        OffsetFirstSerial = Lines.FirstSerial;
         ExtentHeight = Lines.Count * LineHeight;
         bool keepsPosition = FollowsEnd == false;
         if (keepsPosition) {
@@ -179,8 +184,60 @@ internal sealed class LogPresenter : FrameworkElement, IScrollInfo {
             if (drawnAsGlyphs) {
                 return width;
             }
+            return DrawFormatted(drawingContext, length, brush);
+        }
+    }
+
+    private static bool CanBreakBetween(char previous, char next) {
+        bool splitsPair = char.IsLowSurrogate(next);
+        bool followsJoiner = previous == ZeroWidthJoiner;
+        var category = char.GetUnicodeCategory(next);
+        bool continuesCluster =
+            category == UnicodeCategory.NonSpacingMark ||
+            category == UnicodeCategory.SpacingCombiningMark ||
+            category == UnicodeCategory.EnclosingMark ||
+            category == UnicodeCategory.Format;
+        return splitsPair == false && followsJoiner == false && continuesCluster == false;
+    }
+
+    /*
+     * Ends a piece after whitespace near the limit when possible, otherwise
+     * at the latest position that does not split a character or cluster.
+     */
+    private int FindPieceEnd(int start, int length) {
+        var limit = start + MaxCharactersPerPiece;
+        bool fits = limit >= length;
+        if (fits) {
+            return length;
+        }
+        for (var end = limit; end > start + MaxCharactersPerPiece / 2; end--) {
+            bool afterWhitespace = char.IsWhiteSpace(TextBuffer[end - 1]);
+            if (afterWhitespace) {
+                return end;
+            }
+        }
+        for (var end = limit; end > start; end--) {
+            bool canBreak = CanBreakBetween(TextBuffer[end - 1], TextBuffer[end]);
+            if (canBreak) {
+                return end;
+            }
+        }
+        return limit;
+    }
+
+    /*
+     * WPF breaks a line of text after about 9,600 characters, so long text is
+     * formatted in pieces placed side by side. Each piece is aligned to the
+     * line's baseline, which also aligns fallback fonts with glyph-run lines.
+     */
+    private double DrawFormatted(DrawingContext drawingContext, int length, Brush brush) {
+        var x = 0.0;
+        var start = 0;
+        var more = start < length;
+        while (more) {
+            var end = FindPieceEnd(start, length);
             var formattedText = new FormattedText(
-                new string(TextBuffer, 0, length),
+                new string(TextBuffer, start, end - start),
                 CultureInfo.CurrentUICulture,
                 FlowDirection.LeftToRight,
                 Typeface,
@@ -189,9 +246,12 @@ internal sealed class LogPresenter : FrameworkElement, IScrollInfo {
                 PixelsPerDip) {
                 MaxLineCount = 1
             };
-            drawingContext.DrawText(formattedText, new Point(0, 0));
-            return formattedText.WidthIncludingTrailingWhitespace;
+            drawingContext.DrawText(formattedText, new Point(x, Baseline - formattedText.Baseline));
+            x += formattedText.WidthIncludingTrailingWhitespace;
+            start = end;
+            more = start < length;
         }
+        return x;
     }
 
     private void Realize() {
@@ -307,24 +367,18 @@ internal sealed class LogPresenter : FrameworkElement, IScrollInfo {
         AddVisualChild(Content);
     }
 
-    public void Append(List<LogLine> lines) {
+    /*
+     * Called after lines are added to Lines. Lines discarded in the meantime
+     * are found from the change in the first serial.
+     */
+    public void LinesAdded() {
         EnsureFont();
-        var removed = 0;
-        /*
-         * Lines that the buffer would discard within this batch are skipped.
-         */
-        for (var i = Math.Max(0, lines.Count - Lines.Limit); i < lines.Count; i++) {
-            bool replaced = Lines.Add(lines[i]);
-            if (replaced) {
-                removed++;
-            }
-        }
-        LinesChanged(removed);
+        LinesChanged();
     }
 
     public void SetLineLimit(int limit) {
-        var removed = Lines.Resize(limit);
-        LinesChanged(removed);
+        Lines.Resize(limit);
+        LinesChanged();
     }
 
     public void InvalidateFont() {
@@ -383,12 +437,24 @@ internal sealed class LogPresenter : FrameworkElement, IScrollInfo {
         SetHorizontalOffset(HorizontalOffset + ViewportWidth);
     }
 
+    /*
+     * A negative count is the system's one-screen-at-a-time setting, and a
+     * count of more lines than fit in the viewport also scrolls one page.
+     */
+    public double GetWheelDistance(int wheelScrollLines) {
+        bool scrollsPage = wheelScrollLines < 0;
+        if (scrollsPage) {
+            return ViewportHeight;
+        }
+        return Math.Min(wheelScrollLines * LineHeight, ViewportHeight);
+    }
+
     public void MouseWheelUp() {
-        SetVerticalOffset(VerticalOffset - SystemParameters.WheelScrollLines * LineHeight);
+        SetVerticalOffset(VerticalOffset - GetWheelDistance(SystemParameters.WheelScrollLines));
     }
 
     public void MouseWheelDown() {
-        SetVerticalOffset(VerticalOffset + SystemParameters.WheelScrollLines * LineHeight);
+        SetVerticalOffset(VerticalOffset + GetWheelDistance(SystemParameters.WheelScrollLines));
     }
 
     public void MouseWheelLeft() {

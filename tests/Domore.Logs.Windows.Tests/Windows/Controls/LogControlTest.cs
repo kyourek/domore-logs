@@ -1,6 +1,7 @@
 ﻿using Domore.Logs;
 using NUnit.Framework;
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
@@ -45,6 +46,34 @@ public sealed class LogControlTest {
         configure?.Invoke(control);
         Assert.That(control.Attach(), Is.True);
         return control;
+    }
+
+    private static IEnumerable<GlyphRun> GlyphRuns(Drawing drawing) {
+        var glyphRunDrawing = drawing as GlyphRunDrawing;
+        bool isGlyphRun = glyphRunDrawing is not null;
+        if (isGlyphRun) {
+            yield return glyphRunDrawing.GlyphRun;
+        }
+        var group = drawing as DrawingGroup;
+        bool isGroup = group is not null;
+        if (isGroup) {
+            foreach (var child in group.Children) {
+                foreach (var glyphRun in GlyphRuns(child)) {
+                    yield return glyphRun;
+                }
+            }
+        }
+    }
+
+    /*
+     * Returns the glyph runs of every realized line, in drawing order.
+     */
+    private static GlyphRun[] GlyphRuns(LogControl control) {
+        var content = VisualTreeHelper.GetChild(control.Presenter, 0);
+        return Enumerable.Range(0, VisualTreeHelper.GetChildrenCount(content))
+            .Select(i => VisualTreeHelper.GetChild(content, i))
+            .SelectMany(line => GlyphRuns(VisualTreeHelper.GetDrawing((Visual)line)))
+            .ToArray();
     }
 
     private static void Layout(LogControl control, double width, double height) {
@@ -326,6 +355,80 @@ public sealed class LogControlTest {
             Assert.That(control.Presenter.RealizedCount, Is.EqualTo(0));
             control.UpdateLayout();
             Assert.That(control.Presenter.RealizedCount, Is.EqualTo(1));
+        });
+    }
+
+    [Test]
+    public void ComplexScriptIsShapedWhenFontMapsEveryCharacter() {
+        WpfTestThread.Run(async () => {
+            var control = Attached(c => c.FontFamily = new FontFamily("Arial"));
+            var typeface = new Typeface(control.FontFamily, control.FontStyle, control.FontWeight, control.FontStretch);
+            bool hasGlyphTypeface = typeface.TryGetGlyphTypeface(out var glyphTypeface);
+            if (hasGlyphTypeface == false) {
+                Assert.Ignore("Arial is not installed.");
+            }
+            var word = new string(new[] { (char)0x0633, (char)0x0644, (char)0x0627, (char)0x0645 });
+            Assert.That(word.All(c => glyphTypeface.CharacterToGlyphMap.ContainsKey(c)), Is.True);
+            FirstLog.Info(word);
+            await Lines(control);
+            Layout(control, 400, 100);
+            var runs = GlyphRuns(control);
+            Assert.That(runs.Any(run => run.BidiLevel % 2 == 1), Is.True, "The Arabic text was not laid out right to left.");
+        });
+    }
+
+    [Test]
+    public void LongFallbackLineIsDrawnInFullOnOneRow() {
+        WpfTestThread.Run(async () => {
+            var control = Attached();
+            FirstLog.Info(new string('x', 10000) + char.ConvertFromUtf32(0x1F600) + "END");
+            await Lines(control);
+            Layout(control, 400, 100);
+            var runs = GlyphRuns(control);
+            var text = string.Concat(runs.SelectMany(run => run.Characters ?? []));
+            Assert.That(text.Count(c => c == 'x'), Is.EqualTo(10000));
+            Assert.That(text, Does.EndWith("END"));
+            Assert.That(runs.Select(run => Math.Round(run.BaselineOrigin.Y, 3)).Distinct().Count(), Is.EqualTo(1));
+            Assert.That(control.Presenter.Lines.Count, Is.EqualTo(1));
+        });
+    }
+
+    [Test]
+    public void LargeMultilineEntryKeepsNewestLinesWithoutStagingEveryLine() {
+        WpfTestThread.Run(async () => {
+            var control = Attached(c => c.LineLimit = 2);
+            FirstLog.Info(string.Join("\n", Enumerable.Range(0, 200000)));
+#if NETCOREAPP
+            var allocated = GC.GetAllocatedBytesForCurrentThread();
+#endif
+            var lines = await Lines(control);
+#if NETCOREAPP
+            allocated = GC.GetAllocatedBytesForCurrentThread() - allocated;
+            Assert.That(allocated, Is.LessThan(1024 * 1024), "Delivery allocated memory for discarded lines.");
+#endif
+            Assert.That(lines, Is.EqualTo(new[] {
+                "  199998",
+                "  199999"
+            }));
+        });
+    }
+
+    [Test]
+    public void PageModeWheelScrollsOneViewportInWheelDirection() {
+        WpfTestThread.Run(async () => {
+            var control = Attached();
+            Layout(control, 400, 100);
+            for (var i = 0; i < 100; i++) {
+                FirstLog.Info(i);
+            }
+            await Lines(control);
+            control.UpdateLayout();
+            var presenter = control.Presenter;
+            var lineHeight = presenter.ExtentHeight / presenter.Lines.Count;
+            Assert.That(presenter.GetWheelDistance(-1), Is.EqualTo(presenter.ViewportHeight), "Page mode");
+            Assert.That(presenter.GetWheelDistance(3), Is.EqualTo(3 * lineHeight).Within(0.001), "Three lines");
+            Assert.That(presenter.GetWheelDistance(1000), Is.EqualTo(presenter.ViewportHeight), "More lines than fit");
+            Assert.That(presenter.GetWheelDistance(0), Is.EqualTo(0), "No lines");
         });
     }
 

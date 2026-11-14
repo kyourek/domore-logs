@@ -26,7 +26,7 @@ internal static class LogLineFormatter {
         };
     }
 
-    private static void AddMessage(List<LogLine> lines, ILogEntry entry, string message, LogLineKind kind) {
+    private static void AddMessage(LogLineBuffer lines, ILogEntry entry, string message, LogLineKind kind) {
         var text = message ?? string.Empty;
         var start = 0;
         var more = true;
@@ -89,7 +89,11 @@ internal static class LogLineFormatter {
         return position;
     }
 
-    public static void Split(ILogEntry entry, List<LogLine> lines) {
+    /*
+     * Lines are added directly to the bounded buffer, so an entry with more
+     * lines than the buffer holds needs no further storage.
+     */
+    public static void Split(ILogEntry entry, LogLineBuffer lines) {
         var messages = entry.LogList as IList<string> ?? entry.LogList?.ToArray() ?? [];
         bool single = messages.Count == 1;
         if (single) {
