@@ -95,8 +95,7 @@ internal sealed class MyNewClass {
     internal string MyInternalString {
         get;
         set {
-            bool valueIsNull = value is null;
-            if (valueIsNull) {
+            if (value is null) {
                 throw new ArgumentNullException(nameof(MyInternalString));
             }
             field = value;
@@ -172,9 +171,12 @@ code more complicated, such as when the field must be `volatile`.
   accessors are fine when they keep the property clear.
 - Always use braces around statement bodies, including `if`/`else`, `do`, `for`,
   `foreach`, `while`, `using`, and `lock`, even when the body is one statement.
-- Always use a descriptively named `bool` variable as the condition of an `if`.
-  Keep logic out of `if` and `while` conditions by calculating it beforehand;
-  update the condition variable explicitly inside loops.
+- Use simple conditions directly in `if`, `while`, `for`, and similar
+  statements: a null check such as `is null`, a boolean variable or property, a
+  negation, or a single comparison. For a complex condition, such as one that
+  combines several tests or calls, calculate it beforehand into a descriptively
+  named boolean variable declared with `var`, and update that variable
+  explicitly inside loops.
 - Check reference values for null with `is null` and `is not null`. Prefer these
   patterns over `== null` and `!= null`.
 - Prefer `/* ... */` block comments, with ` * ` at the start of each interior
@@ -183,10 +185,13 @@ code more complicated, such as when the field must be `volatile`.
 - In XML documentation, put each element's opening tag, content, and closing tag
   on separate lines. Document public APIs; do not add XML documentation comments
   to private or internal members.
+- Prefer `var` for local variables that have an initializer, including boolean
+  condition variables. Use an explicit type only when the declaration has no
+  initializer or `var` would not infer the intended type.
 - Use PascalCase for types and members, and prefix interfaces with `I`. Follow
-  the repository's member ordering and `var` preferences. Prefer private
-  `readonly` fields where possible, keep fields non-public, and put each type in
-  a separate file named after the type.
+  the repository's member ordering. Prefer private `readonly` fields where
+  possible, keep fields non-public, and put each type in a separate file named
+  after the type.
 - Prefer file-scoped namespaces where supported by the project, and declare
   closed concrete classes `sealed`.
 

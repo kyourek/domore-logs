@@ -34,11 +34,11 @@ internal static class WpfTestThread {
         };
         thread.SetApartmentState(ApartmentState.STA);
         thread.Start();
-        bool finished = thread.Join(Timeout);
+        var finished = thread.Join(Timeout);
         if (finished == false) {
             throw new TimeoutException("The WPF test did not finish in time.");
         }
-        bool failed = failure is not null;
+        var failed = failure is not null;
         if (failed) {
             ExceptionDispatchInfo.Capture(failure).Throw();
         }

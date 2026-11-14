@@ -72,7 +72,7 @@ internal sealed class LogGenerator {
         /*
          * Checking first skips formatting entries that nobody would display.
          */
-        bool enabled = log.Enabled(severity);
+        var enabled = log.Enabled(severity);
         if (enabled) {
             log.Data(severity, MessageOf(source, n, severity));
         }
@@ -104,7 +104,7 @@ internal sealed class LogGenerator {
             while (true) {
                 await Task.Delay(10, cancellationToken).ConfigureAwait(false);
                 var target = Rate;
-                bool rateChanged = target != rate;
+                var rateChanged = target != rate;
                 if (rateChanged) {
                     rate = target;
                     since = clock.Elapsed;

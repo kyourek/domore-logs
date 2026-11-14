@@ -9,11 +9,11 @@ internal sealed class LogFilter {
     private readonly HashSet<string> Names = new(StringComparer.Ordinal);
 
     private bool Matches(Type type, string name) {
-        bool unrestricted = Types.Count == 0 && Names.Count == 0;
+        var unrestricted = Types.Count == 0 && Names.Count == 0;
         if (unrestricted) {
             return true;
         }
-        bool typeMatches = type is not null && Types.Contains(type);
+        var typeMatches = type is not null && Types.Contains(type);
         if (typeMatches) {
             return true;
         }
@@ -24,20 +24,20 @@ internal sealed class LogFilter {
 
     public LogFilter(LogSeverity threshold, IEnumerable<Type> types, IEnumerable<string> names) {
         Threshold = threshold;
-        bool hasTypes = types is not null;
+        var hasTypes = types is not null;
         if (hasTypes) {
             foreach (var type in types) {
-                bool typeIsNull = type is null;
+                var typeIsNull = type is null;
                 if (typeIsNull) {
                     continue;
                 }
                 Types.Add(type);
             }
         }
-        bool hasNames = names is not null;
+        var hasNames = names is not null;
         if (hasNames) {
             foreach (var name in names) {
-                bool nameIsNull = name is null;
+                var nameIsNull = name is null;
                 if (nameIsNull) {
                     continue;
                 }
@@ -47,14 +47,14 @@ internal sealed class LogFilter {
     }
 
     public LogSeverity ThresholdFor(Type type) {
-        bool matches = type is not null && Matches(type, type.Name);
+        var matches = type is not null && Matches(type, type.Name);
         return matches
             ? Threshold
             : LogSeverity.None;
     }
 
     public bool Includes(LogSeverity severity, Type type, string name) {
-        bool severityIsShown =
+        var severityIsShown =
             Threshold != LogSeverity.None &&
             severity != LogSeverity.None &&
             Threshold <= severity;

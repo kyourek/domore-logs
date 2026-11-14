@@ -32,7 +32,7 @@ public sealed partial class LogSampleWindow {
     private void Source_Changed(object sender, RoutedEventArgs e) {
         var source = (CheckBox)sender;
         var name = (string)source.Content;
-        bool shown = source.IsChecked == true;
+        var shown = source.IsChecked == true;
         if (shown) {
             ShownSources.Add(name);
         }
@@ -42,7 +42,7 @@ public sealed partial class LogSampleWindow {
     }
 
     private void DarkTheme_Changed(object sender, RoutedEventArgs e) {
-        bool dark = DarkTheme.IsChecked == true;
+        var dark = DarkTheme.IsChecked == true;
         LogView.Style = dark
             ? (Style)FindResource("DarkLogStyle")
             : null;

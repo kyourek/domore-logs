@@ -8,7 +8,7 @@ namespace Domore.Windows.Controls;
 public sealed class LogGlyphTableTest {
     private static LogGlyphTable Table(double emSize, string fontFamily = "Consolas") {
         var typeface = new Typeface(new FontFamily(fontFamily), FontStyles.Normal, FontWeights.Normal, FontStretches.Normal);
-        bool hasGlyphTypeface = typeface.TryGetGlyphTypeface(out var glyphTypeface);
+        var hasGlyphTypeface = typeface.TryGetGlyphTypeface(out var glyphTypeface);
         if (hasGlyphTypeface == false) {
             Assert.Ignore(fontFamily + " is not installed.");
         }
@@ -36,7 +36,7 @@ public sealed class LogGlyphTableTest {
     [Test]
     public void MapsCharactersToFontGlyphs() {
         var table = Table(10);
-        bool mapped = table.TryGet('A', out var index, out var advance);
+        var mapped = table.TryGet('A', out var index, out var advance);
         Assert.That(mapped, Is.True);
         Assert.That(index, Is.EqualTo(table.Typeface.CharacterToGlyphMap['A']));
         Assert.That(advance, Is.EqualTo(table.Typeface.AdvanceWidths[index] * 10));

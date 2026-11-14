@@ -37,7 +37,7 @@ internal static class LogLineFormatter {
             more = end >= 0;
             var stop = more ? end : text.Length;
             var length = stop - start;
-            bool endsWithReturn = length > 0 && text[stop - 1] == '\r';
+            var endsWithReturn = length > 0 && text[stop - 1] == '\r';
             if (endsWithReturn) {
                 length--;
             }
@@ -78,7 +78,7 @@ internal static class LogLineFormatter {
         var stop = start + length;
         for (var i = start; i < stop; i++) {
             var c = text[i];
-            bool isTab = c == '\t';
+            var isTab = c == '\t';
             if (isTab) {
                 for (var j = 0; j < TabWidth; j++) {
                     buffer[position++] = ' ';
@@ -89,7 +89,7 @@ internal static class LogLineFormatter {
              * WPF text layout breaks lines at controls and at the line and
              * paragraph separators, which would end a single-row display line.
              */
-            bool breaksLine = char.IsControl(c) || c == LineSeparator || c == ParagraphSeparator;
+            var breaksLine = char.IsControl(c) || c == LineSeparator || c == ParagraphSeparator;
             buffer[position++] = breaksLine ? ' ' : c;
         }
         return position;
@@ -102,7 +102,7 @@ internal static class LogLineFormatter {
     public static void Split(ILogEntry entry, LogLineBuffer lines) {
         var messages = entry.LogList as IList<string> ?? entry.LogList?.ToArray() ?? [];
         var header = new LogLine(entry.LogDate, entry.LogSeverity, entry.LogName, null, 0, 0, LogLineKind.Header);
-        bool single = messages.Count == 1;
+        var single = messages.Count == 1;
         if (single) {
             AddMessage(lines, header, messages[0], LogLineKind.Headed);
             return;
@@ -115,7 +115,7 @@ internal static class LogLineFormatter {
 
     public static int Write(LogLine line, ref char[] buffer) {
         var capacity = HeaderPadding + line.Name.Length + TabWidth * line.Length;
-        bool bufferIsSmall = buffer.Length < capacity;
+        var bufferIsSmall = buffer.Length < capacity;
         if (bufferIsSmall) {
             buffer = new char[Math.Max(capacity, 2 * buffer.Length)];
         }

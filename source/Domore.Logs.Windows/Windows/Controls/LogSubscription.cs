@@ -36,7 +36,7 @@ internal sealed class LogSubscription : ILogSubscription {
     }
 
     private void QueueFlush() {
-        bool shutdownStarted = Dispatcher.HasShutdownStarted;
+        var shutdownStarted = Dispatcher.HasShutdownStarted;
         if (shutdownStarted) {
             return;
         }
@@ -44,7 +44,7 @@ internal sealed class LogSubscription : ILogSubscription {
          * Logging marks callbacks through the execution context. The flush is
          * not part of the callback, so the context does not flow into it.
          */
-        bool flowIsSuppressed = ExecutionContext.IsFlowSuppressed();
+        var flowIsSuppressed = ExecutionContext.IsFlowSuppressed();
         if (flowIsSuppressed) {
             Dispatcher.BeginInvoke(DispatcherPriority.Background, new Action(Flush));
         }
@@ -64,7 +64,7 @@ internal sealed class LogSubscription : ILogSubscription {
             }
         }
         set {
-            bool valueIsNull = value is null;
+            var valueIsNull = value is null;
             if (valueIsNull) {
                 throw new ArgumentNullException(nameof(Filter));
             }
@@ -82,13 +82,13 @@ internal sealed class LogSubscription : ILogSubscription {
             }
         }
         set {
-            bool valueIsInvalid = value < 1;
+            var valueIsInvalid = value < 1;
             if (valueIsInvalid) {
                 throw new ArgumentOutOfRangeException(nameof(PendingLimit), value, "The value must be positive.");
             }
             lock (Locker) {
                 field = value;
-                bool overLimit = Pending.Count > field;
+                var overLimit = Pending.Count > field;
                 while (overLimit) {
                     Pending.Dequeue();
                     overLimit = Pending.Count > field;
@@ -109,7 +109,7 @@ internal sealed class LogSubscription : ILogSubscription {
     }
 
     public void Receive(ILogEntry entry) {
-        bool entryIsNull = entry is null;
+        var entryIsNull = entry is null;
         if (entryIsNull) {
             return;
         }
@@ -117,7 +117,7 @@ internal sealed class LogSubscription : ILogSubscription {
         lock (Locker) {
             var limit = PendingLimit;
             Pending.Enqueue(entry);
-            bool overLimit = Pending.Count > limit;
+            var overLimit = Pending.Count > limit;
             while (overLimit) {
                 Pending.Dequeue();
                 overLimit = Pending.Count > limit;

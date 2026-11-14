@@ -20,7 +20,7 @@ internal sealed class LogLineBuffer {
 
     public LogLine this[int index] {
         get {
-            bool indexIsOutOfRange = index < 0 || index >= Count;
+            var indexIsOutOfRange = index < 0 || index >= Count;
             if (indexIsOutOfRange) {
                 throw new ArgumentOutOfRangeException(nameof(index));
             }
@@ -29,7 +29,7 @@ internal sealed class LogLineBuffer {
     }
 
     public LogLineBuffer(int limit) {
-        bool limitIsInvalid = limit < 1;
+        var limitIsInvalid = limit < 1;
         if (limitIsInvalid) {
             throw new ArgumentOutOfRangeException(nameof(limit));
         }
@@ -38,13 +38,13 @@ internal sealed class LogLineBuffer {
 
     public bool Add(LogLine line) {
         AddedCount++;
-        bool full = Count == Limit;
+        var full = Count == Limit;
         if (full) {
             Items[Start] = line;
             Start = (Start + 1) % Items.Length;
             return true;
         }
-        bool storageIsFull = Count == Items.Length;
+        var storageIsFull = Count == Items.Length;
         if (storageIsFull) {
             var length = (int)Math.Min(Limit, Math.Max(256L, 2L * Items.Length));
             Array.Resize(ref Items, length);
@@ -55,7 +55,7 @@ internal sealed class LogLineBuffer {
     }
 
     public int Resize(int limit) {
-        bool limitIsInvalid = limit < 1;
+        var limitIsInvalid = limit < 1;
         if (limitIsInvalid) {
             throw new ArgumentOutOfRangeException(nameof(limit));
         }

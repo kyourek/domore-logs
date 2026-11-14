@@ -55,12 +55,12 @@ public sealed class LogControlTest {
 
     private static IEnumerable<GlyphRun> GlyphRuns(Drawing drawing) {
         var glyphRunDrawing = drawing as GlyphRunDrawing;
-        bool isGlyphRun = glyphRunDrawing is not null;
+        var isGlyphRun = glyphRunDrawing is not null;
         if (isGlyphRun) {
             yield return glyphRunDrawing.GlyphRun;
         }
         var group = drawing as DrawingGroup;
-        bool isGroup = group is not null;
+        var isGroup = group is not null;
         if (isGroup) {
             foreach (var child in group.Children) {
                 foreach (var glyphRun in GlyphRuns(child)) {
@@ -82,7 +82,7 @@ public sealed class LogControlTest {
     }
 
     private static void Layout(LogControl control, double width, double height) {
-        bool initialized = control.IsInitialized;
+        var initialized = control.IsInitialized;
         if (initialized == false) {
             control.BeginInit();
             control.EndInit();
@@ -151,12 +151,12 @@ public sealed class LogControlTest {
         var ink = 0;
         var same = 0;
         for (var i = 0; i < first.Length; i++) {
-            bool background = first[i] == White && second[i] == White;
+            var background = first[i] == White && second[i] == White;
             if (background) {
                 continue;
             }
             ink++;
-            bool equal = first[i] == second[i];
+            var equal = first[i] == second[i];
             if (equal) {
                 same++;
             }
@@ -502,7 +502,7 @@ public sealed class LogControlTest {
         WpfTestThread.Run(async () => {
             var control = Attached(c => c.FontFamily = new FontFamily("Arial"));
             var typeface = new Typeface(control.FontFamily, control.FontStyle, control.FontWeight, control.FontStretch);
-            bool hasGlyphTypeface = typeface.TryGetGlyphTypeface(out var glyphTypeface);
+            var hasGlyphTypeface = typeface.TryGetGlyphTypeface(out var glyphTypeface);
             if (hasGlyphTypeface == false) {
                 Assert.Ignore("Arial is not installed.");
             }
@@ -563,7 +563,7 @@ public sealed class LogControlTest {
 
     private static LogControl ArialAttached() {
         var typeface = new Typeface(new FontFamily("Arial"), FontStyles.Normal, FontWeights.Normal, FontStretches.Normal);
-        bool hasArial = typeface.TryGetGlyphTypeface(out _);
+        var hasArial = typeface.TryGetGlyphTypeface(out _);
         if (hasArial == false) {
             Assert.Ignore("Arial is not installed.");
         }
@@ -861,16 +861,16 @@ public sealed class LogControlTest {
      */
     private static (Brush Brush, double Opacity) SelectionLook(Drawing drawing, double opacity = 1) {
         var geometry = drawing as GeometryDrawing;
-        bool isGeometry = geometry is not null;
+        var isGeometry = geometry is not null;
         if (isGeometry) {
             return (geometry.Brush, opacity);
         }
         var group = drawing as DrawingGroup;
-        bool isGroup = group is not null;
+        var isGroup = group is not null;
         if (isGroup) {
             foreach (var child in group.Children) {
                 var look = SelectionLook(child, opacity * group.Opacity);
-                bool found = look.Brush is not null;
+                var found = look.Brush is not null;
                 if (found) {
                     return look;
                 }

@@ -65,12 +65,12 @@ public sealed class LogControl : Control {
 
     private void FilterCollectionChanged(object oldValue, object newValue) {
         var oldCollection = oldValue as INotifyCollectionChanged;
-        bool oldValueIsObservable = oldCollection is not null;
+        var oldValueIsObservable = oldCollection is not null;
         if (oldValueIsObservable) {
             CollectionChangedEventManager.RemoveHandler(oldCollection, FilterCollection_CollectionChanged);
         }
         var newCollection = newValue as INotifyCollectionChanged;
-        bool newValueIsObservable = newCollection is not null;
+        var newValueIsObservable = newCollection is not null;
         if (newValueIsObservable) {
             CollectionChangedEventManager.AddHandler(newCollection, FilterCollection_CollectionChanged);
         }
@@ -83,7 +83,7 @@ public sealed class LogControl : Control {
 
     private void Copy(object sender, ExecutedRoutedEventArgs e) {
         var text = Presenter.CopyText();
-        bool hasText = text.Length > 0;
+        var hasText = text.Length > 0;
         if (hasText) {
             try {
                 Clipboard.SetText(text);
@@ -105,7 +105,7 @@ public sealed class LogControl : Control {
             /*
              * The filter may have changed while the entry was pending.
              */
-            bool included = filter.Includes(entry.LogSeverity, entry.LogType, entry.LogName);
+            var included = filter.Includes(entry.LogSeverity, entry.LogType, entry.LogName);
             if (included) {
                 LogLineFormatter.Split(entry, Presenter.Lines);
                 added = true;
@@ -180,7 +180,7 @@ public sealed class LogControl : Control {
     /// <inheritdoc/>
     protected override void OnKeyDown(KeyEventArgs e) {
         base.OnKeyDown(e);
-        bool unhandled = e.Handled == false;
+        var unhandled = e.Handled == false;
         if (unhandled) {
             e.Handled = HandleKey(e.Key);
         }
@@ -190,7 +190,7 @@ public sealed class LogControl : Control {
     protected override void OnPropertyChanged(DependencyPropertyChangedEventArgs e) {
         base.OnPropertyChanged(e);
         var property = e.Property;
-        bool fontChanged =
+        var fontChanged =
             property == FontFamilyProperty ||
             property == FontSizeProperty ||
             property == FontStretchProperty ||
@@ -199,7 +199,7 @@ public sealed class LogControl : Control {
         if (fontChanged) {
             Presenter?.InvalidateFont();
         }
-        bool foregroundChanged = property == ForegroundProperty;
+        var foregroundChanged = property == ForegroundProperty;
         if (foregroundChanged) {
             Presenter?.InvalidateLines();
         }
@@ -465,13 +465,13 @@ public sealed class LogControl : Control {
 
     /// <inheritdoc/>
     public override void OnApplyTemplate() {
-        bool hadScrollViewer = ScrollViewerPart is not null;
+        var hadScrollViewer = ScrollViewerPart is not null;
         if (hadScrollViewer) {
             ScrollViewerPart.Content = null;
         }
         base.OnApplyTemplate();
         ScrollViewerPart = GetTemplateChild(ScrollViewerTemplatePartName) as ScrollViewer;
-        bool hasScrollViewer = ScrollViewerPart is not null;
+        var hasScrollViewer = ScrollViewerPart is not null;
         if (hasScrollViewer) {
             ScrollViewerPart.CanContentScroll = true;
             ScrollViewerPart.Content = Presenter;

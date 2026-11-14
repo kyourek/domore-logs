@@ -65,7 +65,7 @@ internal sealed class LogPresenter : FrameworkElement, IScrollInfo {
     private double MaxVerticalOffset => Math.Max(0, ExtentHeight - ViewportHeight);
 
     private static double Clamp(double value, double max) {
-        bool valueIsNaN = double.IsNaN(value);
+        var valueIsNaN = double.IsNaN(value);
         if (valueIsNaN) {
             return 0;
         }
@@ -73,7 +73,7 @@ internal sealed class LogPresenter : FrameworkElement, IScrollInfo {
     }
 
     private static T[] Fit<T>(T[] buffer, int length) {
-        bool fits = buffer.Length >= length;
+        var fits = buffer.Length >= length;
         return fits
             ? buffer
             : new T[Math.Max(length, 2 * buffer.Length)];
@@ -93,7 +93,7 @@ internal sealed class LogPresenter : FrameworkElement, IScrollInfo {
         PixelsPerDip = VisualTreeHelper.GetDpi(this).PixelsPerDip;
         Typeface = new Typeface(Owner.FontFamily, Owner.FontStyle, Owner.FontWeight, Owner.FontStretch);
         FontEmSize = Owner.FontSize;
-        bool hasGlyphTypeface = Typeface.TryGetGlyphTypeface(out var glyphTypeface);
+        var hasGlyphTypeface = Typeface.TryGetGlyphTypeface(out var glyphTypeface);
         Glyphs = hasGlyphTypeface
             ? new LogGlyphTable(glyphTypeface, FontEmSize)
             : null;
@@ -123,7 +123,7 @@ internal sealed class LogPresenter : FrameworkElement, IScrollInfo {
         var removed = Lines.FirstSerial - OffsetFirstSerial;
         OffsetFirstSerial = Lines.FirstSerial;
         ExtentHeight = Lines.Count * LineHeight;
-        bool keepsPosition = FollowsEnd == false;
+        var keepsPosition = FollowsEnd == false;
         if (keepsPosition) {
             /*
              * Keep the same lines in view while older lines are discarded.
@@ -146,7 +146,7 @@ internal sealed class LogPresenter : FrameworkElement, IScrollInfo {
         IndexBuffer = Fit(IndexBuffer, length);
         AdvanceBuffer = Fit(AdvanceBuffer, length);
         for (var i = 0; i < length; i++) {
-            bool unmapped = Glyphs.TryGet(TextBuffer[i], out IndexBuffer[i], out AdvanceBuffer[i]) == false;
+            var unmapped = Glyphs.TryGet(TextBuffer[i], out IndexBuffer[i], out AdvanceBuffer[i]) == false;
             if (unmapped) {
                 return false;
             }
@@ -191,7 +191,7 @@ internal sealed class LogPresenter : FrameworkElement, IScrollInfo {
         var brush = GetBrush(line.Severity);
         using (var drawingContext = visual.RenderOpen()) {
             var width = 0.0;
-            bool drawnAsGlyphs = Glyphs is not null && DrawGlyphs(drawingContext, length, brush, out width);
+            var drawnAsGlyphs = Glyphs is not null && DrawGlyphs(drawingContext, length, brush, out width);
             if (drawnAsGlyphs) {
                 return width;
             }
@@ -208,8 +208,8 @@ internal sealed class LogPresenter : FrameworkElement, IScrollInfo {
      * characters there are not a surrogate pair inside the first length.
      */
     private int CodePointAt(int index, int length) {
-        bool inRange = index >= 0 && index + 1 < length;
-        bool isPair = inRange && char.IsHighSurrogate(TextBuffer[index]) && char.IsLowSurrogate(TextBuffer[index + 1]);
+        var inRange = index >= 0 && index + 1 < length;
+        var isPair = inRange && char.IsHighSurrogate(TextBuffer[index]) && char.IsLowSurrogate(TextBuffer[index + 1]);
         return isPair
             ? char.ConvertToUtf32(TextBuffer[index], TextBuffer[index + 1])
             : -1;
@@ -224,25 +224,25 @@ internal sealed class LogPresenter : FrameworkElement, IScrollInfo {
     private bool CanBreakAt(int end, int length) {
         var previous = TextBuffer[end - 1];
         var next = TextBuffer[end];
-        bool splitsPair = char.IsLowSurrogate(next);
-        bool followsJoiner = previous == ZeroWidthJoiner;
+        var splitsPair = char.IsLowSurrogate(next);
+        var followsJoiner = previous == ZeroWidthJoiner;
         var category = char.GetUnicodeCategory(next);
-        bool continuesCluster =
+        var continuesCluster =
             category == UnicodeCategory.NonSpacingMark ||
             category == UnicodeCategory.SpacingCombiningMark ||
             category == UnicodeCategory.EnclosingMark ||
             category == UnicodeCategory.Format;
         var codePoint = CodePointAt(end, length);
-        bool isModifier = codePoint >= 0x1F3FB && codePoint <= 0x1F3FF;
-        bool isTag = codePoint >= 0xE0020 && codePoint <= 0xE007F;
-        bool completesFlag = IsRegionalIndicator(codePoint) && IsRegionalIndicator(CodePointAt(end - 2, length));
-        bool extendsSequence = isModifier || isTag || completesFlag;
+        var isModifier = codePoint >= 0x1F3FB && codePoint <= 0x1F3FF;
+        var isTag = codePoint >= 0xE0020 && codePoint <= 0xE007F;
+        var completesFlag = IsRegionalIndicator(codePoint) && IsRegionalIndicator(CodePointAt(end - 2, length));
+        var extendsSequence = isModifier || isTag || completesFlag;
         return splitsPair == false && followsJoiner == false && continuesCluster == false && extendsSequence == false;
     }
 
     private static bool IsRightToLeftLetter(char c) {
-        bool hebrewToArabic = c >= 0x0590 && c <= 0x08FF;
-        bool presentationForms = (c >= 0xFB1D && c <= 0xFDFF) || (c >= 0xFE70 && c <= 0xFEFF);
+        var hebrewToArabic = c >= 0x0590 && c <= 0x08FF;
+        var presentationForms = (c >= 0xFB1D && c <= 0xFDFF) || (c >= 0xFE70 && c <= 0xFEFF);
         return hebrewToArabic || presentationForms;
     }
 
@@ -264,25 +264,25 @@ internal sealed class LogPresenter : FrameworkElement, IScrollInfo {
      */
     private int FindPieceEnd(int start, int length) {
         var limit = start + MaxCharactersPerPiece;
-        bool fits = limit >= length;
+        var fits = limit >= length;
         if (fits) {
             return length;
         }
         var earliest = start + MaxCharactersPerPiece / 2;
         for (var end = limit; end > earliest; end--) {
-            bool preservesOrder = PreservesOrder(end);
+            var preservesOrder = PreservesOrder(end);
             if (preservesOrder) {
                 return end;
             }
         }
         for (var end = limit; end > earliest; end--) {
-            bool afterWhitespace = char.IsWhiteSpace(TextBuffer[end - 1]);
+            var afterWhitespace = char.IsWhiteSpace(TextBuffer[end - 1]);
             if (afterWhitespace) {
                 return end;
             }
         }
         for (var end = limit; end > start; end--) {
-            bool canBreak = CanBreakAt(end, length);
+            var canBreak = CanBreakAt(end, length);
             if (canBreak) {
                 return end;
             }
@@ -327,7 +327,7 @@ internal sealed class LogPresenter : FrameworkElement, IScrollInfo {
         var first = firstSerial + Math.Max(0, (int)(VerticalOffset / LineHeight));
         var last = firstSerial + Math.Min(count - 1, (int)((VerticalOffset + ViewportHeight) / LineHeight));
         foreach (var serial in Realized.Keys) {
-            bool outside = serial < first || serial > last;
+            var outside = serial < first || serial > last;
             if (outside) {
                 Released.Add(serial);
             }
@@ -337,7 +337,7 @@ internal sealed class LogPresenter : FrameworkElement, IScrollInfo {
             Realized.Remove(serial);
         }
         Released.Clear();
-        bool rebase = Realized.Count == 0 || Math.Abs(first - BaseSerial) > RebaseDistance;
+        var rebase = Realized.Count == 0 || Math.Abs(first - BaseSerial) > RebaseDistance;
         if (rebase) {
             BaseSerial = first;
             foreach (var pair in Realized) {
@@ -346,11 +346,11 @@ internal sealed class LogPresenter : FrameworkElement, IScrollInfo {
         }
         var width = ExtentWidth;
         for (var serial = first; serial <= last; serial++) {
-            bool realized = Realized.ContainsKey(serial);
+            var realized = Realized.ContainsKey(serial);
             if (realized) {
                 continue;
             }
-            bool mustCreate = Reusable.Count == 0;
+            var mustCreate = Reusable.Count == 0;
             var visual = mustCreate ? new DrawingVisual() : Reusable.Pop();
             if (mustCreate) {
                 Content.Children.Add(visual);
@@ -362,7 +362,7 @@ internal sealed class LogPresenter : FrameworkElement, IScrollInfo {
         while (Reusable.Count > 0) {
             Content.Children.Remove(Reusable.Pop());
         }
-        bool widthChanged = width != ExtentWidth;
+        var widthChanged = width != ExtentWidth;
         if (widthChanged) {
             ExtentWidth = width;
             HorizontalOffset = Clamp(HorizontalOffset, MaxHorizontalOffset);
@@ -387,9 +387,9 @@ internal sealed class LogPresenter : FrameworkElement, IScrollInfo {
      * across the whole viewport and aligned with the line visuals.
      */
     private void DrawSelection(long first, long last) {
-        bool hasSelection = SelectionAnchor.HasValue;
+        var hasSelection = SelectionAnchor.HasValue;
         if (hasSelection == false) {
-            bool clears = SelectionIsDrawn;
+            var clears = SelectionIsDrawn;
             if (clears) {
                 Selection.RenderOpen().Close();
                 SelectionIsDrawn = false;
@@ -400,13 +400,13 @@ internal sealed class LogPresenter : FrameworkElement, IScrollInfo {
         var start = Math.Max(first, Math.Min(anchor, SelectionEnd));
         var stop = Math.Min(last, Math.Max(anchor, SelectionEnd));
         using (var drawingContext = Selection.RenderOpen()) {
-            bool visible = start <= stop;
+            var visible = start <= stop;
             if (visible) {
                 var top = (start - BaseSerial) * LineHeight + Content.Offset.Y;
                 var height = (stop - start + 1) * LineHeight;
                 var rectangle = new Rect(0, top, ViewportWidth, height);
                 var brush = Owner.LogSelectionBackground;
-                bool usesDefault = brush is null;
+                var usesDefault = brush is null;
                 if (usesDefault) {
                     drawingContext.PushOpacity(SelectionOpacity);
                     drawingContext.DrawRectangle(SystemColors.HighlightBrush, null, rectangle);
@@ -423,11 +423,11 @@ internal sealed class LogPresenter : FrameworkElement, IScrollInfo {
     protected override int VisualChildrenCount => 2;
 
     protected override Visual GetVisualChild(int index) {
-        bool isSelection = index == 0;
+        var isSelection = index == 0;
         if (isSelection) {
             return Selection;
         }
-        bool isContent = index == 1;
+        var isContent = index == 1;
         if (isContent) {
             return Content;
         }
@@ -436,8 +436,8 @@ internal sealed class LogPresenter : FrameworkElement, IScrollInfo {
 
     protected override Size MeasureOverride(Size availableSize) {
         EnsureFont();
-        bool widthIsUnbounded = double.IsInfinity(availableSize.Width);
-        bool heightIsUnbounded = double.IsInfinity(availableSize.Height);
+        var widthIsUnbounded = double.IsInfinity(availableSize.Width);
+        var heightIsUnbounded = double.IsInfinity(availableSize.Height);
         MeasuredUnbounded = widthIsUnbounded || heightIsUnbounded;
         return new Size(
             widthIsUnbounded ? ExtentWidth : availableSize.Width,
@@ -468,7 +468,7 @@ internal sealed class LogPresenter : FrameworkElement, IScrollInfo {
     protected override void OnMouseLeftButtonDown(MouseButtonEventArgs e) {
         base.OnMouseLeftButtonDown(e);
         Owner.Focus();
-        bool extends = (Keyboard.Modifiers & ModifierKeys.Shift) != 0;
+        var extends = (Keyboard.Modifiers & ModifierKeys.Shift) != 0;
         SelectLine(e.GetPosition(this).Y, extends);
         CaptureMouse();
         e.Handled = true;
@@ -476,14 +476,14 @@ internal sealed class LogPresenter : FrameworkElement, IScrollInfo {
 
     protected override void OnMouseMove(MouseEventArgs e) {
         base.OnMouseMove(e);
-        bool dragging = IsMouseCaptured && e.LeftButton == MouseButtonState.Pressed;
+        var dragging = IsMouseCaptured && e.LeftButton == MouseButtonState.Pressed;
         if (dragging) {
             var y = e.GetPosition(this).Y;
-            bool above = y < 0;
+            var above = y < 0;
             if (above) {
                 LineUp();
             }
-            bool below = y > RenderSize.Height;
+            var below = y > RenderSize.Height;
             if (below) {
                 LineDown();
             }
@@ -549,12 +549,12 @@ internal sealed class LogPresenter : FrameworkElement, IScrollInfo {
      * Selecting pauses following new lines, so the selection stays in view.
      */
     public void SelectLine(double y, bool extend) {
-        bool hasLines = Lines.Count > 0;
+        var hasLines = Lines.Count > 0;
         if (hasLines) {
             var index = (int)Clamp(Math.Floor((VerticalOffset + y) / LineHeight), Lines.Count - 1);
             FollowsEnd = false;
             SelectionEnd = Lines.FirstSerial + index;
-            bool startsSelection = extend == false || SelectionAnchor.HasValue == false;
+            var startsSelection = extend == false || SelectionAnchor.HasValue == false;
             if (startsSelection) {
                 SelectionAnchor = SelectionEnd;
             }
@@ -563,7 +563,7 @@ internal sealed class LogPresenter : FrameworkElement, IScrollInfo {
     }
 
     public bool ClearSelection() {
-        bool hadSelection = SelectionAnchor.HasValue;
+        var hadSelection = SelectionAnchor.HasValue;
         SelectionAnchor = null;
         InvalidateArrange();
         return hadSelection;
@@ -576,7 +576,7 @@ internal sealed class LogPresenter : FrameworkElement, IScrollInfo {
     public string CopyText() {
         var first = Lines.FirstSerial;
         var last = Lines.AddedCount - 1;
-        bool hasSelection = SelectionAnchor.HasValue;
+        var hasSelection = SelectionAnchor.HasValue;
         if (hasSelection) {
             var anchor = SelectionAnchor.Value;
             first = Math.Max(first, Math.Min(anchor, SelectionEnd));
@@ -644,7 +644,7 @@ internal sealed class LogPresenter : FrameworkElement, IScrollInfo {
      * count of more lines than fit in the viewport also scrolls one page.
      */
     public double GetWheelDistance(int wheelScrollLines) {
-        bool scrollsPage = wheelScrollLines < 0;
+        var scrollsPage = wheelScrollLines < 0;
         if (scrollsPage) {
             return ViewportHeight;
         }

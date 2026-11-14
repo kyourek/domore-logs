@@ -36,17 +36,17 @@ internal sealed class LogGlyphTable {
      * line breaking, are left to WPF text layout.
      */
     private static bool IsSimple(char c) {
-        bool basic = c >= 0x0020 && c < 0x0300 && c != SoftHyphen;
-        bool punctuation = (c >= 0x2010 && c <= 0x2027) || (c >= 0x2030 && c <= 0x205E);
+        var basic = c >= 0x0020 && c < 0x0300 && c != SoftHyphen;
+        var punctuation = (c >= 0x2010 && c <= 0x2027) || (c >= 0x2030 && c <= 0x205E);
         return basic || punctuation;
     }
 
     private byte Resolve(Page page, int slot, char c) {
-        bool requiresLayout = IsSimple(c) == false;
+        var requiresLayout = IsSimple(c) == false;
         if (requiresLayout) {
             return Unmapped;
         }
-        bool mapped = CharacterMap.TryGetValue(c, out var index);
+        var mapped = CharacterMap.TryGetValue(c, out var index);
         if (mapped) {
             page.Indices[slot] = index;
             page.Advances[slot] = AdvanceWidths[index] * EmSize;
@@ -69,7 +69,7 @@ internal sealed class LogGlyphTable {
         var slot = c % PageSize;
         var page = Pages[pageIndex] ??= new Page();
         var state = page.States[slot];
-        bool unknown = state == Unknown;
+        var unknown = state == Unknown;
         if (unknown) {
             state = page.States[slot] = Resolve(page, slot, c);
         }
