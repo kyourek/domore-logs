@@ -19,6 +19,7 @@ public sealed class LogGlyphTableTest {
     [TestCase(0x05D0, TestName = "HebrewLetterRequiresBidiLayout")]
     [TestCase(0x0301, TestName = "CombiningMarkRequiresPositioning")]
     [TestCase(0x200F, TestName = "BidiControlRequiresLayout")]
+    [TestCase(0x00AD, TestName = "SoftHyphenIsLeftToTextLayout")]
     public void CharactersRequiringLayoutAreUnmappedEvenWhenFontHasThem(int codePoint) {
         var table = Table(12, "Arial");
         Assert.That(table.TryGet((char)codePoint, out _, out _), Is.False);

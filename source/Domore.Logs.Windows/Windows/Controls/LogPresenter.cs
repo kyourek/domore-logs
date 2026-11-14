@@ -31,7 +31,7 @@ namespace Domore.Windows.Controls;
  */
 internal sealed class LogPresenter : FrameworkElement, IScrollInfo {
     private const int MaxGlyphsPerRun = 1024;
-    private const int MaxCharactersPerPiece = 4096;
+    private const int MaxCharactersPerPiece = 8192;
     private const char ZeroWidthJoiner = (char)0x200D;
     private const long RebaseDistance = 10000;
     private const double SelectionOpacity = 0.3;
@@ -211,9 +211,27 @@ internal sealed class LogPresenter : FrameworkElement, IScrollInfo {
         return splitsPair == false && followsJoiner == false && continuesCluster == false;
     }
 
+    private static bool IsRightToLeftLetter(char c) {
+        bool hebrewToArabic = c >= 0x0590 && c <= 0x08FF;
+        bool presentationForms = (c >= 0xFB1D && c <= 0xFDFF) || (c >= 0xFE70 && c <= 0xFEFF);
+        return hebrewToArabic || presentationForms;
+    }
+
     /*
-     * Ends a piece after whitespace near the limit when possible, otherwise
-     * at the latest position that does not split a character or cluster.
+     * Pieces are laid out independently, so a right-to-left run split between
+     * two pieces would have its parts in reading order rather than reversed.
+     * No run continues past whitespace that is followed by a left-to-right
+     * letter, so a piece may end there without changing the line's order.
+     */
+    private bool PreservesOrder(int end) {
+        var next = TextBuffer[end];
+        return char.IsWhiteSpace(TextBuffer[end - 1]) && char.IsLetter(next) && IsRightToLeftLetter(next) == false;
+    }
+
+    /*
+     * Ends a piece near the limit after whitespace that keeps the line's order
+     * when possible, then after any whitespace, and otherwise at the latest
+     * position that does not split a character or cluster.
      */
     private int FindPieceEnd(int start, int length) {
         var limit = start + MaxCharactersPerPiece;
@@ -221,7 +239,14 @@ internal sealed class LogPresenter : FrameworkElement, IScrollInfo {
         if (fits) {
             return length;
         }
-        for (var end = limit; end > start + MaxCharactersPerPiece / 2; end--) {
+        var earliest = start + MaxCharactersPerPiece / 2;
+        for (var end = limit; end > earliest; end--) {
+            bool preservesOrder = PreservesOrder(end);
+            if (preservesOrder) {
+                return end;
+            }
+        }
+        for (var end = limit; end > earliest; end--) {
             bool afterWhitespace = char.IsWhiteSpace(TextBuffer[end - 1]);
             if (afterWhitespace) {
                 return end;
@@ -237,9 +262,11 @@ internal sealed class LogPresenter : FrameworkElement, IScrollInfo {
     }
 
     /*
-     * WPF breaks a line of text after about 9,600 characters, so long text is
-     * formatted in pieces placed side by side. Each piece is aligned to the
-     * line's baseline, which also aligns fallback fonts with glyph-run lines.
+     * WPF breaks a line of text after about 9,600 characters, so longer text
+     * is formatted in pieces placed side by side. Pieces are as long as that
+     * allows, so most lines are formatted whole with their full bidirectional
+     * context. Each piece is aligned to the line's baseline, which also aligns
+     * fallback fonts with glyph-run lines.
      */
     private double DrawFormatted(DrawingContext drawingContext, int length, Brush brush) {
         var x = 0.0;
@@ -311,6 +338,14 @@ internal sealed class LogPresenter : FrameworkElement, IScrollInfo {
             ExtentWidth = width;
             HorizontalOffset = Clamp(HorizontalOffset, MaxHorizontalOffset);
             ScrollOwner?.InvalidateScrollInfo();
+            /*
+             * An unbounded measure returns the extent, which this arrange just
+             * changed. Without scroll bars appearing to force one, the stale
+             * desired size would otherwise stay.
+             */
+            if (MeasuredUnbounded) {
+                InvalidateMeasure();
+            }
         }
         Content.Offset = new Vector(
             Snap(-HorizontalOffset),

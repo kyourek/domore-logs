@@ -14,6 +14,7 @@ internal sealed class LogGlyphTable {
     private const byte Unknown = 0;
     private const byte Mapped = 1;
     private const byte Unmapped = 2;
+    private const char SoftHyphen = (char)0x00AD;
 
     private readonly Page[] Pages = new Page[(char.MaxValue + 1) / PageSize];
     private readonly IDictionary<int, ushort> CharacterMap;
@@ -31,10 +32,11 @@ internal sealed class LogGlyphTable {
      * needs no shaping, reordering, or mark positioning, even when the font
      * maps every character. Latin, IPA, spacing modifier letters, and common
      * punctuation qualify. Other characters, including surrogates, marks,
-     * and bidirectional controls, are left to WPF text layout.
+     * bidirectional controls, and the soft hyphen, whose display depends on
+     * line breaking, are left to WPF text layout.
      */
     private static bool IsSimple(char c) {
-        bool basic = c >= 0x0020 && c < 0x0300;
+        bool basic = c >= 0x0020 && c < 0x0300 && c != SoftHyphen;
         bool punctuation = (c >= 0x2010 && c <= 0x2027) || (c >= 0x2030 && c <= 0x205E);
         return basic || punctuation;
     }

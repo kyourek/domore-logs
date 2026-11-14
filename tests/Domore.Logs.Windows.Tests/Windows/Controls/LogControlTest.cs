@@ -1,8 +1,10 @@
 ﻿using Domore.Logs;
+using Domore.Windows.Controls.Mocks;
 using NUnit.Framework;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Globalization;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
@@ -91,6 +93,13 @@ public sealed class LogControlTest {
         control.UpdateLayout();
     }
 
+    private static Style HiddenScrollBars() {
+        var style = new Style(typeof(ScrollViewer));
+        style.Setters.Add(new Setter(ScrollViewer.HorizontalScrollBarVisibilityProperty, ScrollBarVisibility.Hidden));
+        style.Setters.Add(new Setter(ScrollViewer.VerticalScrollBarVisibilityProperty, ScrollBarVisibility.Hidden));
+        return style;
+    }
+
     private static int[] Pixels(FrameworkElement root, int width, int height) {
         root.Measure(new Size(width, height));
         root.Arrange(new Rect(0, 0, width, height));
@@ -108,13 +117,10 @@ public sealed class LogControlTest {
      * flow direction by design.
      */
     private static async Task<int[]> RenderLongLine(FlowDirection flowDirection, double horizontalOffset) {
-        var scrollViewerStyle = new Style(typeof(ScrollViewer));
-        scrollViewerStyle.Setters.Add(new Setter(ScrollViewer.HorizontalScrollBarVisibilityProperty, ScrollBarVisibility.Hidden));
-        scrollViewerStyle.Setters.Add(new Setter(ScrollViewer.VerticalScrollBarVisibilityProperty, ScrollBarVisibility.Hidden));
         var control = Attached(c => {
             c.Background = Brushes.White;
             c.Foreground = Brushes.Black;
-            c.ScrollViewerStyle = scrollViewerStyle;
+            c.ScrollViewerStyle = HiddenScrollBars();
         });
         try {
             var root = new Border { FlowDirection = flowDirection, Child = control };
@@ -510,6 +516,109 @@ public sealed class LogControlTest {
         });
     }
 
+    /*
+     * Returns the width of a line holding text. The entry has a fixed date, so
+     * lines differ only in their text and not in their header's time.
+     */
+    private static double WidthOf(string text) {
+        var control = new LogControl { FontFamily = new FontFamily("Arial") };
+        LogLineFormatter.Split(new MockLogEntry { LogList = [text] }, control.Presenter.Lines);
+        control.Presenter.LinesAdded();
+        Layout(control, 600, 100);
+        return control.Presenter.ExtentWidth;
+    }
+
+    [Test]
+    public void SoftHyphenAddsNoVisibleHyphenOrWidth() {
+        WpfTestThread.Run(() => {
+            var soft = string.Concat("pass", (char)0xAD, "word");
+            var typeface = new Typeface(new FontFamily("Arial"), FontStyles.Normal, FontWeights.Normal, FontStretches.Normal);
+            if (typeface.TryGetGlyphTypeface(out _) == false) {
+                Assert.Ignore("Arial is not installed.");
+            }
+            var plain = WidthOf("password");
+            var withSoftHyphen = WidthOf(soft);
+            var withHyphen = WidthOf("pass-word");
+            Assert.That(withHyphen, Is.GreaterThan(plain + 2), "A visible hyphen should add width.");
+            Assert.That(withSoftHyphen, Is.EqualTo(plain).Within(1), "The soft hyphen was drawn.");
+            return Task.CompletedTask;
+        });
+    }
+
+    private static readonly string HebrewWord = new(new[] { (char)0x05D0, (char)0x05D1, (char)0x05D2 });
+    private static readonly string FinalHebrewWord = new(new[] { (char)0x05E9, (char)0x05DC, (char)0x05D5, (char)0x05DD });
+
+    private static string HebrewPhrase(int words) {
+        return string.Join(" ", Enumerable.Repeat(HebrewWord, words)) + " " + FinalHebrewWord;
+    }
+
+    private static string Describe(IEnumerable<GlyphRun> runs) {
+        return string.Join(" | ", runs.Select(run => string.Format(
+            CultureInfo.InvariantCulture,
+            "x={0:F2} level={1} glyphs={2}",
+            run.BaselineOrigin.X,
+            run.BidiLevel,
+            run.GlyphIndices.Count)));
+    }
+
+    private static LogControl ArialAttached() {
+        var typeface = new Typeface(new FontFamily("Arial"), FontStyles.Normal, FontWeights.Normal, FontStretches.Normal);
+        bool hasArial = typeface.TryGetGlyphTypeface(out _);
+        if (hasArial == false) {
+            Assert.Ignore("Arial is not installed.");
+        }
+        return Attached(c => c.FontFamily = new FontFamily("Arial"));
+    }
+
+    [Test]
+    public void LongRightToLeftPassageIsOrderedLikeTheUnsplitLine() {
+        WpfTestThread.Run(async () => {
+            var control = ArialAttached();
+            FirstLog.Info(HebrewPhrase(1250));
+            await Lines(control);
+            Layout(control, 600, 100);
+            var text = LogLineFormatter.Format(control.Presenter.Lines[0]);
+            Assert.That(text.Length, Is.GreaterThan(5000).And.LessThan(9000));
+            var formattedText = new FormattedText(
+                text,
+                CultureInfo.CurrentUICulture,
+                FlowDirection.LeftToRight,
+                new Typeface(control.FontFamily, control.FontStyle, control.FontWeight, control.FontStretch),
+                control.FontSize,
+                Brushes.Black,
+                VisualTreeHelper.GetDpi(control.Presenter).PixelsPerDip) {
+                MaxLineCount = 1
+            };
+            var reference = new DrawingGroup();
+            using (var drawingContext = reference.Open()) {
+                drawingContext.DrawText(formattedText, new Point(0, 0));
+            }
+            Assert.That(Describe(GlyphRuns(control)), Is.EqualTo(Describe(GlyphRuns(reference))));
+        });
+    }
+
+    /*
+     * A right-to-left phrase reads from right to left, so the run holding its
+     * last word must be drawn left of every other run of the phrase.
+     */
+    [Test]
+    public void RightToLeftPhraseNearAPieceBreakKeepsItsOrder() {
+        WpfTestThread.Run(async () => {
+            var control = ArialAttached();
+            var before = string.Concat(Enumerable.Repeat("lorem ", 1290));
+            var after = string.Concat(Enumerable.Repeat(" ipsum", 300));
+            FirstLog.Info(before + HebrewPhrase(249) + after + char.ConvertFromUtf32(0x1F600));
+            await Lines(control);
+            Layout(control, 600, 100);
+            Assert.That(LogLineFormatter.Format(control.Presenter.Lines[0]).Length, Is.GreaterThan(9600));
+            var rightToLeft = GlyphRuns(control).Where(run => run.BidiLevel % 2 == 1).ToArray();
+            var last = rightToLeft.Single(run => run.Characters.Contains(FinalHebrewWord[0]));
+            var others = rightToLeft.Where(run => run != last).ToArray();
+            Assert.That(others, Is.Not.Empty);
+            Assert.That(others.Select(run => run.BaselineOrigin.X), Is.All.GreaterThan(last.BaselineOrigin.X));
+        });
+    }
+
     [Test]
     public void LongFallbackLineIsDrawnInFullOnOneRow() {
         WpfTestThread.Run(async () => {
@@ -741,6 +850,49 @@ public sealed class LogControlTest {
             Assert.That(ApplicationCommands.Copy.CanExecute(null, control), Is.True);
             Assert.That(control.Focusable, Is.True);
             return Task.CompletedTask;
+        });
+    }
+
+    private static void LayoutPanel(StackPanel panel) {
+        panel.Measure(new Size(400, 100));
+        panel.Arrange(new Rect(0, 0, 400, 100));
+        panel.UpdateLayout();
+    }
+
+    /*
+     * In a horizontal StackPanel the control is measured without a width limit,
+     * so it must size itself to the text its presenter realizes while arranging.
+     */
+    private static void AssertSizedToText(LogControl control) {
+        var presenter = control.Presenter;
+        Assert.That(presenter.ExtentWidth, Is.GreaterThan(0), "No text was realized.");
+        Assert.That(presenter.ViewportWidth, Is.EqualTo(presenter.ExtentWidth).Within(0.5));
+        Assert.That(control.ActualWidth, Is.GreaterThanOrEqualTo(presenter.ExtentWidth));
+    }
+
+    [Test]
+    public void ControlWithHiddenScrollBarsSizesToItsTextInUnboundedWidth() {
+        WpfTestThread.Run(async () => {
+            var control = Attached(c => c.ScrollViewerStyle = HiddenScrollBars());
+            var panel = new StackPanel { Orientation = Orientation.Horizontal };
+            panel.Children.Add(control);
+            control.BeginInit();
+            control.EndInit();
+            FirstLog.Info("A short line");
+            await Lines(control);
+            LayoutPanel(panel);
+            AssertSizedToText(control);
+            var narrow = control.Presenter.ExtentWidth;
+            FirstLog.Info(new string('M', 70));
+            await Lines(control);
+            LayoutPanel(panel);
+            AssertSizedToText(control);
+            Assert.That(control.Presenter.ExtentWidth, Is.GreaterThan(narrow), "A wider line did not widen the control.");
+            var small = control.Presenter.ExtentWidth;
+            control.FontSize = 24;
+            LayoutPanel(panel);
+            AssertSizedToText(control);
+            Assert.That(control.Presenter.ExtentWidth, Is.GreaterThan(small), "A larger font did not widen the control.");
         });
     }
 
