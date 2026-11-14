@@ -2,9 +2,11 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
+using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
+using System.Windows.Input;
 using System.Windows.Media;
 
 namespace Domore.Windows.Controls;
@@ -13,11 +15,19 @@ namespace Domore.Windows.Controls;
 /// Displays entries written through <see cref="ILog"/> as they are logged.
 /// </summary>
 /// <remarks>
+/// <para>
 /// The control subscribes to logging through <see cref="Logging.Subscribe(ILogSubscription)"/>
 /// while it is loaded and unsubscribes when it is unloaded. Entries may be logged on any thread;
 /// they are queued and drawn in batches on the control's dispatcher. Only lines inside the
 /// viewport are drawn, and the oldest lines are discarded once <see cref="LineLimit"/> is reached.
 /// The view follows new entries while it is scrolled to the end.
+/// </para>
+/// <para>
+/// Click a row to select it, and Shift-click or drag to select a range. Selecting pauses following
+/// new entries; End resumes it, and Escape clears the selection. <see cref="ApplicationCommands.Copy"/>
+/// (Ctrl+C) copies the selected rows, or every retained row when nothing is selected. The arrow keys,
+/// Page Up, Page Down, Home, and End scroll the view.
+/// </para>
 /// </remarks>
 public sealed class LogControl : Control {
     static LogControl() {
@@ -71,6 +81,23 @@ public sealed class LogControl : Control {
         Subscription.Filter = new LogFilter(Threshold, LogTypes, LogNames);
     }
 
+    private void Copy(object sender, ExecutedRoutedEventArgs e) {
+        var text = Presenter.CopyText();
+        bool hasText = text.Length > 0;
+        if (hasText) {
+            try {
+                Clipboard.SetText(text);
+            }
+            catch (ExternalException) {
+                /*
+                 * Another application holds the clipboard. Like TextBox, the
+                 * copy is abandoned rather than failing the application.
+                 */
+            }
+        }
+        e.Handled = true;
+    }
+
     private void Deliver(IReadOnlyCollection<ILogEntry> entries) {
         var filter = Subscription.Filter;
         var added = false;
@@ -92,6 +119,44 @@ public sealed class LogControl : Control {
     internal LogPresenter Presenter { get; }
     internal LogSubscription Subscription { get; }
 
+    /*
+     * Returns true when the key was used. Escape is used only to clear a
+     * selection, so it otherwise still reaches the window, such as a dialog's
+     * Cancel button.
+     */
+    internal bool HandleKey(Key key) {
+        switch (key) {
+            case Key.Escape:
+                return Presenter.ClearSelection();
+            case Key.Up:
+                Presenter.LineUp();
+                return true;
+            case Key.Down:
+                Presenter.LineDown();
+                return true;
+            case Key.Left:
+                Presenter.LineLeft();
+                return true;
+            case Key.Right:
+                Presenter.LineRight();
+                return true;
+            case Key.PageUp:
+                Presenter.PageUp();
+                return true;
+            case Key.PageDown:
+                Presenter.PageDown();
+                return true;
+            case Key.Home:
+                Presenter.SetVerticalOffset(0);
+                return true;
+            case Key.End:
+                Presenter.SetVerticalOffset(double.PositiveInfinity);
+                return true;
+            default:
+                return false;
+        }
+    }
+
     internal bool Attach() {
         return Logging.Subscribe(Subscription);
     }
@@ -110,6 +175,15 @@ public sealed class LogControl : Control {
             _ => null
         };
         return brush ?? Foreground;
+    }
+
+    /// <inheritdoc/>
+    protected override void OnKeyDown(KeyEventArgs e) {
+        base.OnKeyDown(e);
+        bool unhandled = e.Handled == false;
+        if (unhandled) {
+            e.Handled = HandleKey(e.Key);
+        }
     }
 
     /// <inheritdoc/>
@@ -361,6 +435,7 @@ public sealed class LogControl : Control {
             deliver: Deliver,
             filter: new LogFilter(LogSeverity.Info, null, null),
             pendingLimit: DefaultLineLimit);
+        CommandBindings.Add(new CommandBinding(ApplicationCommands.Copy, Copy));
         Loaded += LogControl_Loaded;
         Unloaded += LogControl_Unloaded;
     }

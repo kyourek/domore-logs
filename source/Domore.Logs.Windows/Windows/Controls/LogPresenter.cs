@@ -2,9 +2,11 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Text;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
+using System.Windows.Input;
 using System.Windows.Media;
 
 namespace Domore.Windows.Controls;
@@ -22,14 +24,20 @@ namespace Domore.Windows.Controls;
  *
  * Line visuals are positioned relative to a base serial near the viewport,
  * which keeps coordinates small however many lines have been added.
+ *
+ * Selected rows are identified by serial, so a selection keeps its rows as
+ * older lines are discarded. The highlight is a separate visual beneath the
+ * lines and is redrawn during arrange together with them.
  */
 internal sealed class LogPresenter : FrameworkElement, IScrollInfo {
     private const int MaxGlyphsPerRun = 1024;
     private const int MaxCharactersPerPiece = 4096;
     private const char ZeroWidthJoiner = (char)0x200D;
     private const long RebaseDistance = 10000;
+    private const double SelectionOpacity = 0.3;
 
     private readonly LogControl Owner;
+    private readonly DrawingVisual Selection = new();
     private readonly ContainerVisual Content = new();
     private readonly Dictionary<long, DrawingVisual> Realized = [];
     private readonly List<long> Released = [];
@@ -43,6 +51,9 @@ internal sealed class LogPresenter : FrameworkElement, IScrollInfo {
     private bool MeasuredUnbounded;
     private long OffsetFirstSerial;
     private long BaseSerial;
+    private long? SelectionAnchor;
+    private long SelectionEnd;
+    private bool SelectionIsDrawn;
     private Typeface Typeface;
     private LogGlyphTable Glyphs;
     private double FontEmSize;
@@ -304,16 +315,51 @@ internal sealed class LogPresenter : FrameworkElement, IScrollInfo {
         Content.Offset = new Vector(
             Snap(-HorizontalOffset),
             Snap((BaseSerial - firstSerial) * LineHeight - VerticalOffset));
+        DrawSelection(first, last);
     }
 
-    protected override int VisualChildrenCount => 1;
+    /*
+     * Highlights the selected rows between first and last, the realized range,
+     * across the whole viewport and aligned with the line visuals.
+     */
+    private void DrawSelection(long first, long last) {
+        bool hasSelection = SelectionAnchor.HasValue;
+        if (hasSelection == false) {
+            bool clears = SelectionIsDrawn;
+            if (clears) {
+                Selection.RenderOpen().Close();
+                SelectionIsDrawn = false;
+            }
+            return;
+        }
+        var anchor = SelectionAnchor.Value;
+        var start = Math.Max(first, Math.Min(anchor, SelectionEnd));
+        var stop = Math.Min(last, Math.Max(anchor, SelectionEnd));
+        using (var drawingContext = Selection.RenderOpen()) {
+            bool visible = start <= stop;
+            if (visible) {
+                var top = (start - BaseSerial) * LineHeight + Content.Offset.Y;
+                var height = (stop - start + 1) * LineHeight;
+                drawingContext.PushOpacity(SelectionOpacity);
+                drawingContext.DrawRectangle(SystemColors.HighlightBrush, null, new Rect(0, top, ViewportWidth, height));
+                drawingContext.Pop();
+            }
+        }
+        SelectionIsDrawn = true;
+    }
+
+    protected override int VisualChildrenCount => 2;
 
     protected override Visual GetVisualChild(int index) {
-        bool indexIsInvalid = index != 0;
-        if (indexIsInvalid) {
-            throw new ArgumentOutOfRangeException(nameof(index));
+        bool isSelection = index == 0;
+        if (isSelection) {
+            return Selection;
         }
-        return Content;
+        bool isContent = index == 1;
+        if (isContent) {
+            return Content;
+        }
+        throw new ArgumentOutOfRangeException(nameof(index));
     }
 
     protected override Size MeasureOverride(Size availableSize) {
@@ -347,6 +393,38 @@ internal sealed class LogPresenter : FrameworkElement, IScrollInfo {
         InvalidateFont();
     }
 
+    protected override void OnMouseLeftButtonDown(MouseButtonEventArgs e) {
+        base.OnMouseLeftButtonDown(e);
+        Owner.Focus();
+        bool extends = (Keyboard.Modifiers & ModifierKeys.Shift) != 0;
+        SelectLine(e.GetPosition(this).Y, extends);
+        CaptureMouse();
+        e.Handled = true;
+    }
+
+    protected override void OnMouseMove(MouseEventArgs e) {
+        base.OnMouseMove(e);
+        bool dragging = IsMouseCaptured && e.LeftButton == MouseButtonState.Pressed;
+        if (dragging) {
+            var y = e.GetPosition(this).Y;
+            bool above = y < 0;
+            if (above) {
+                LineUp();
+            }
+            bool below = y > RenderSize.Height;
+            if (below) {
+                LineDown();
+            }
+            SelectLine(y, true);
+        }
+    }
+
+    protected override void OnMouseLeftButtonUp(MouseButtonEventArgs e) {
+        base.OnMouseLeftButtonUp(e);
+        ReleaseMouseCapture();
+        e.Handled = true;
+    }
+
     public LogLineBuffer Lines { get; }
     public int RealizedCount => Realized.Count;
 
@@ -370,6 +448,7 @@ internal sealed class LogPresenter : FrameworkElement, IScrollInfo {
          * the application's flow direction.
          */
         FlowDirection = FlowDirection.LeftToRight;
+        AddVisualChild(Selection);
         AddVisualChild(Content);
     }
 
@@ -391,6 +470,51 @@ internal sealed class LogPresenter : FrameworkElement, IScrollInfo {
         FontIsCurrent = false;
         InvalidateMeasure();
         InvalidateArrange();
+    }
+
+    /*
+     * Selects the row at y in the viewport, or extends the selection to it.
+     * Selecting pauses following new lines, so the selection stays in view.
+     */
+    public void SelectLine(double y, bool extend) {
+        bool hasLines = Lines.Count > 0;
+        if (hasLines) {
+            var index = (int)Clamp(Math.Floor((VerticalOffset + y) / LineHeight), Lines.Count - 1);
+            FollowsEnd = false;
+            SelectionEnd = Lines.FirstSerial + index;
+            bool startsSelection = extend == false || SelectionAnchor.HasValue == false;
+            if (startsSelection) {
+                SelectionAnchor = SelectionEnd;
+            }
+            InvalidateArrange();
+        }
+    }
+
+    public bool ClearSelection() {
+        bool hadSelection = SelectionAnchor.HasValue;
+        SelectionAnchor = null;
+        InvalidateArrange();
+        return hadSelection;
+    }
+
+    /*
+     * Returns the selected rows that are still retained, or every retained row
+     * when nothing is selected, one row per line.
+     */
+    public string CopyText() {
+        var first = Lines.FirstSerial;
+        var last = Lines.AddedCount - 1;
+        bool hasSelection = SelectionAnchor.HasValue;
+        if (hasSelection) {
+            var anchor = SelectionAnchor.Value;
+            first = Math.Max(first, Math.Min(anchor, SelectionEnd));
+            last = Math.Min(last, Math.Max(anchor, SelectionEnd));
+        }
+        var text = new StringBuilder();
+        for (var serial = first; serial <= last; serial++) {
+            text.AppendLine(LogLineFormatter.Format(Lines[(int)(serial - Lines.FirstSerial)]));
+        }
+        return text.ToString();
     }
 
     public void InvalidateLines() {

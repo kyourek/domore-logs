@@ -14,6 +14,8 @@ namespace Domore.Windows.Controls;
 internal static class LogLineFormatter {
     private const int TabWidth = 4;
     private const int HeaderPadding = 32;
+    private const char LineSeparator = (char)0x2028;
+    private const char ParagraphSeparator = (char)0x2029;
 
     private static string Abbreviate(LogSeverity severity) {
         return severity switch {
@@ -83,8 +85,12 @@ internal static class LogLineFormatter {
                 }
                 continue;
             }
-            bool isControl = char.IsControl(c);
-            buffer[position++] = isControl ? ' ' : c;
+            /*
+             * WPF text layout breaks lines at controls and at the line and
+             * paragraph separators, which would end a single-row display line.
+             */
+            bool breaksLine = char.IsControl(c) || c == LineSeparator || c == ParagraphSeparator;
+            buffer[position++] = breaksLine ? ' ' : c;
         }
         return position;
     }

@@ -58,6 +58,13 @@ public sealed class LogLineFormatterTest {
     }
 
     [Test]
+    public void LineAndParagraphSeparatorsAreReplaced() {
+        var message = "before" + (char)0x2028 + "middle" + (char)0x2029 + "after";
+        var entry = new MockLogEntry { LogList = [message] };
+        Assert.That(Format(entry), Is.EqualTo(new[] { "01:02:03.045 inf Mock before middle after" }));
+    }
+
+    [Test]
     public void EmptyAndNullMessagesProduceEmptyLines() {
         var entry = new MockLogEntry { LogList = ["", null] };
         Assert.That(Format(entry), Is.EqualTo(new[] { "01:02:03.045 inf Mock", "  ", "  " }));

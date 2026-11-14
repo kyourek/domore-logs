@@ -22,6 +22,13 @@ redrawing them. A line with characters the font cannot map is drawn with
 while it is scrolled to the end, and keeps its position otherwise. The
 horizontal scroll range is the widest line drawn so far.
 
+Click a row to select it, and Shift-click or drag to select a range. Press
+Ctrl+C to copy the selected rows, or every retained row when nothing is
+selected. Selecting pauses following new entries so the selection stays in
+view; End resumes following, and Escape clears the selection. The selection
+keeps its rows while older lines are discarded. The arrow keys, Page Up,
+Page Down, Home, and End scroll the view.
+
 `Threshold` sets the lowest severity displayed. The default is `Info`, and
 `None` displays nothing. Set `LogTypes`, `LogNames`, or both to display only
 entries whose `LogType` or `LogName` is listed. When both are null or empty,

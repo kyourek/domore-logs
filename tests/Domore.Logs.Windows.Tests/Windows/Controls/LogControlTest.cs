@@ -7,6 +7,7 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using System.Windows.Controls;
+using System.Windows.Input;
 using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
@@ -71,7 +72,7 @@ public sealed class LogControlTest {
      * Returns the glyph runs of every realized line, in drawing order.
      */
     private static GlyphRun[] GlyphRuns(LogControl control) {
-        var content = VisualTreeHelper.GetChild(control.Presenter, 0);
+        var content = VisualTreeHelper.GetChild(control.Presenter, 1);
         return Enumerable.Range(0, VisualTreeHelper.GetChildrenCount(content))
             .Select(i => VisualTreeHelper.GetChild(content, i))
             .SelectMany(line => GlyphRuns(VisualTreeHelper.GetDrawing((Visual)line)))
@@ -192,6 +193,26 @@ public sealed class LogControlTest {
         FirstLog.Info(Lined(count, width));
         Logging.Unsubscribe(capture);
         return capture;
+    }
+
+    private static string[] CopiedMessages(LogControl control) {
+        var lines = control.Presenter.CopyText().Split(new[] { Environment.NewLine }, StringSplitOptions.RemoveEmptyEntries);
+        return Messages(lines);
+    }
+
+    private static async Task<LogControl> Scrollable(int count) {
+        var control = Attached();
+        Layout(control, 400, 100);
+        for (var i = 0; i < count; i++) {
+            FirstLog.Info(i);
+        }
+        await Lines(control);
+        control.UpdateLayout();
+        return control;
+    }
+
+    private static double LineHeightOf(LogPresenter presenter) {
+        return presenter.ExtentHeight / presenter.Lines.Count;
     }
 
     private static void Collect() {
@@ -506,6 +527,20 @@ public sealed class LogControlTest {
     }
 
     [Test]
+    public void TextAfterLineSeparatorIsDrawnOnTheSameRow() {
+        WpfTestThread.Run(async () => {
+            var control = Attached();
+            FirstLog.Info("before" + (char)0x2028 + "after" + char.ConvertFromUtf32(0x1F600) + "END");
+            await Lines(control);
+            Layout(control, 400, 100);
+            var runs = GlyphRuns(control);
+            var text = string.Concat(runs.SelectMany(run => run.Characters ?? []));
+            Assert.That(text, Does.Contain("before").And.EndWith("END"));
+            Assert.That(runs.Select(run => Math.Round(run.BaselineOrigin.Y, 3)).Distinct().Count(), Is.EqualTo(1));
+        });
+    }
+
+    [Test]
     public void LargeMultilineEntryKeepsNewestLinesWithoutStagingEveryLine() {
         WpfTestThread.Run(async () => {
             var control = Attached(c => c.LineLimit = 2);
@@ -584,6 +619,128 @@ public sealed class LogControlTest {
                 "  " + "1".PadLeft(100000, '.'),
                 "  " + "2".PadLeft(100000, '.')
             }));
+        });
+    }
+
+    [Test]
+    public void CopyUsesSelectedRowsAndKeepsThemAsHistoryRolls() {
+        WpfTestThread.Run(async () => {
+            var control = Attached(c => c.LineLimit = 4);
+            foreach (var text in new[] { "zero", "one", "two", "three" }) {
+                FirstLog.Info(text);
+            }
+            await Lines(control);
+            Layout(control, 600, 100);
+            var presenter = control.Presenter;
+            var lineHeight = LineHeightOf(presenter);
+            presenter.SelectLine(1.5 * lineHeight, extend: false);
+            presenter.SelectLine(2.5 * lineHeight, extend: true);
+            Assert.That(CopiedMessages(control), Is.EqualTo(new[] { "inf FirstType one", "inf FirstType two" }));
+            FirstLog.Info("four");
+            await Lines(control);
+            Assert.That(CopiedMessages(control), Is.EqualTo(new[] { "inf FirstType one", "inf FirstType two" }));
+            FirstLog.Info("five");
+            FirstLog.Info("six");
+            await Lines(control);
+            Assert.That(CopiedMessages(control), Is.Empty, "The selected rows were discarded.");
+            Assert.That(presenter.ClearSelection(), Is.True);
+            Assert.That(CopiedMessages(control), Is.EqualTo(new[] {
+                "inf FirstType three",
+                "inf FirstType four",
+                "inf FirstType five",
+                "inf FirstType six"
+            }));
+        });
+    }
+
+    [Test]
+    public void SelectingPausesFollowingAndEndResumesIt() {
+        WpfTestThread.Run(async () => {
+            var control = await Scrollable(100);
+            var presenter = control.Presenter;
+            Assert.That(presenter.VerticalOffset, Is.EqualTo(presenter.ExtentHeight - presenter.ViewportHeight));
+            presenter.SelectLine(10, extend: false);
+            var paused = presenter.VerticalOffset;
+            for (var i = 0; i < 10; i++) {
+                FirstLog.Info(i);
+            }
+            await Lines(control);
+            control.UpdateLayout();
+            Assert.That(presenter.VerticalOffset, Is.EqualTo(paused));
+            Assert.That(presenter.VerticalOffset, Is.LessThan(presenter.ExtentHeight - presenter.ViewportHeight));
+            Assert.That(control.HandleKey(Key.End), Is.True);
+            for (var i = 0; i < 10; i++) {
+                FirstLog.Info(i);
+            }
+            await Lines(control);
+            control.UpdateLayout();
+            Assert.That(presenter.VerticalOffset, Is.EqualTo(presenter.ExtentHeight - presenter.ViewportHeight));
+        });
+    }
+
+    [Test]
+    public void EscapeIsUsedOnlyToClearASelection() {
+        WpfTestThread.Run(async () => {
+            var control = await Scrollable(3);
+            Assert.That(control.HandleKey(Key.Escape), Is.False);
+            control.Presenter.SelectLine(0, extend: false);
+            Assert.That(CopiedMessages(control), Has.Length.EqualTo(1));
+            Assert.That(control.HandleKey(Key.Escape), Is.True);
+            Assert.That(CopiedMessages(control), Has.Length.EqualTo(3));
+        });
+    }
+
+    [Test]
+    public void SelectionHighlightCoversSelectedRowsAndMovesWithScrolling() {
+        WpfTestThread.Run(async () => {
+            var control = await Scrollable(50);
+            var presenter = control.Presenter;
+            presenter.SetVerticalOffset(0);
+            control.UpdateLayout();
+            var lineHeight = LineHeightOf(presenter);
+            presenter.SelectLine(2.5 * lineHeight, extend: false);
+            presenter.SelectLine(3.5 * lineHeight, extend: true);
+            control.UpdateLayout();
+            var highlight = (DrawingVisual)VisualTreeHelper.GetChild(presenter, 0);
+            Assert.That(highlight.ContentBounds.Top, Is.EqualTo(2 * lineHeight).Within(0.5));
+            Assert.That(highlight.ContentBounds.Height, Is.EqualTo(2 * lineHeight).Within(0.5));
+            presenter.SetVerticalOffset(lineHeight);
+            control.UpdateLayout();
+            Assert.That(highlight.ContentBounds.Top, Is.EqualTo(lineHeight).Within(0.5));
+            presenter.ClearSelection();
+            control.UpdateLayout();
+            Assert.That(highlight.ContentBounds.IsEmpty, Is.True);
+        });
+    }
+
+    [Test]
+    public void KeysScrollTheView() {
+        WpfTestThread.Run(async () => {
+            var control = await Scrollable(100);
+            var presenter = control.Presenter;
+            var lineHeight = LineHeightOf(presenter);
+            Assert.That(control.HandleKey(Key.Home), Is.True);
+            Assert.That(presenter.VerticalOffset, Is.EqualTo(0));
+            Assert.That(control.HandleKey(Key.PageDown), Is.True);
+            Assert.That(presenter.VerticalOffset, Is.EqualTo(presenter.ViewportHeight));
+            Assert.That(control.HandleKey(Key.Down), Is.True);
+            Assert.That(presenter.VerticalOffset, Is.EqualTo(presenter.ViewportHeight + lineHeight).Within(0.001));
+            Assert.That(control.HandleKey(Key.Up), Is.True);
+            Assert.That(control.HandleKey(Key.PageUp), Is.True);
+            Assert.That(presenter.VerticalOffset, Is.EqualTo(0).Within(0.001));
+            Assert.That(control.HandleKey(Key.End), Is.True);
+            Assert.That(presenter.VerticalOffset, Is.EqualTo(presenter.ExtentHeight - presenter.ViewportHeight));
+            Assert.That(control.HandleKey(Key.A), Is.False);
+        });
+    }
+
+    [Test]
+    public void CopyCommandIsAvailableAndControlTakesFocus() {
+        WpfTestThread.Run(() => {
+            var control = new LogControl();
+            Assert.That(ApplicationCommands.Copy.CanExecute(null, control), Is.True);
+            Assert.That(control.Focusable, Is.True);
+            return Task.CompletedTask;
         });
     }
 
