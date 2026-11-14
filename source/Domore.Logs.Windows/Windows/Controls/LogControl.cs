@@ -401,6 +401,29 @@ public sealed class LogControl : Control {
     }
 
     /// <summary>
+    /// Identifies the <see cref="LogSelectionBackground"/> dependency property.
+    /// </summary>
+    public static readonly DependencyProperty LogSelectionBackgroundProperty = DependencyProperty.Register(
+        name: nameof(LogSelectionBackground),
+        propertyType: typeof(Brush),
+        ownerType: typeof(LogControl),
+        typeMetadata: new PropertyMetadata(
+            defaultValue: null,
+            propertyChangedCallback: (s, e) => ((LogControl)s).Presenter.InvalidateArrange()));
+
+    /// <summary>
+    /// Gets or sets the brush drawn behind selected rows.
+    /// </summary>
+    /// <value>
+    /// A brush, drawn as given so that its own opacity applies, or null to use the system
+    /// highlight color at 30% opacity.
+    /// </value>
+    public Brush LogSelectionBackground {
+        get => GetValue(LogSelectionBackgroundProperty) as Brush;
+        set => SetValue(LogSelectionBackgroundProperty, value);
+    }
+
+    /// <summary>
     /// Identifies the <see cref="LogScrollViewerStyle"/> dependency property.
     /// </summary>
     public static readonly DependencyProperty LogScrollViewerStyleProperty = DependencyProperty.Register(

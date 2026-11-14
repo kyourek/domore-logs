@@ -855,6 +855,58 @@ public sealed class LogControlTest {
         });
     }
 
+    /*
+     * Returns the brush and the effective opacity that the first drawing in
+     * the selection visual's content is drawn with.
+     */
+    private static (Brush Brush, double Opacity) SelectionLook(Drawing drawing, double opacity = 1) {
+        var geometry = drawing as GeometryDrawing;
+        bool isGeometry = geometry is not null;
+        if (isGeometry) {
+            return (geometry.Brush, opacity);
+        }
+        var group = drawing as DrawingGroup;
+        bool isGroup = group is not null;
+        if (isGroup) {
+            foreach (var child in group.Children) {
+                var look = SelectionLook(child, opacity * group.Opacity);
+                bool found = look.Brush is not null;
+                if (found) {
+                    return look;
+                }
+            }
+        }
+        return (null, opacity);
+    }
+
+    private static Color ColorOf(Brush brush) {
+        return ((SolidColorBrush)brush).Color;
+    }
+
+    [Test]
+    public void SelectionBackgroundDefaultsToTheDimmedSystemHighlightAndFollowsTheProperty() {
+        WpfTestThread.Run(async () => {
+            var control = await Scrollable(3);
+            var highlight = (DrawingVisual)VisualTreeHelper.GetChild(control.Presenter, 0);
+            control.Presenter.SelectLine(0, extend: false);
+            control.UpdateLayout();
+            var look = SelectionLook(VisualTreeHelper.GetDrawing(highlight));
+            Assert.That(control.LogSelectionBackground, Is.Null);
+            Assert.That(ColorOf(look.Brush), Is.EqualTo(SystemColors.HighlightColor));
+            Assert.That(look.Opacity, Is.EqualTo(0.3).Within(0.001));
+            control.LogSelectionBackground = new SolidColorBrush(Color.FromArgb(0x80, 0x11, 0x22, 0x33));
+            control.UpdateLayout();
+            look = SelectionLook(VisualTreeHelper.GetDrawing(highlight));
+            Assert.That(ColorOf(look.Brush), Is.EqualTo(Color.FromArgb(0x80, 0x11, 0x22, 0x33)));
+            Assert.That(look.Opacity, Is.EqualTo(1).Within(0.001), "A set brush is drawn as given.");
+            control.LogSelectionBackground = null;
+            control.UpdateLayout();
+            look = SelectionLook(VisualTreeHelper.GetDrawing(highlight));
+            Assert.That(ColorOf(look.Brush), Is.EqualTo(SystemColors.HighlightColor));
+            Assert.That(look.Opacity, Is.EqualTo(0.3).Within(0.001));
+        });
+    }
+
     [Test]
     public void KeysScrollTheView() {
         WpfTestThread.Run(async () => {

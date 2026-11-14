@@ -48,8 +48,10 @@ Style the control with `Background`, `Foreground`, `BorderBrush`,
 `BorderThickness`, `Padding`, and the font properties, which default to
 Consolas. `LogDebugForeground`, `LogInfoForeground`, `LogWarnForeground`,
 `LogErrorForeground`, and `LogCriticalForeground` color entries by severity;
-a null brush uses `Foreground`. `LogScrollViewerStyle` styles the scroll
-viewer.
+a null brush uses `Foreground`. `LogSelectionBackground` sets the brush
+drawn behind selected rows, as given so its own opacity applies; when it is
+null, the system highlight color is drawn at 30% opacity.
+`LogScrollViewerStyle` styles the scroll viewer.
 
 ```xml
 <logs:LogControl Background="#1E1E1E"

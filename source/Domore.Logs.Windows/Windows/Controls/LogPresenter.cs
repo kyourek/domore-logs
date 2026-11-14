@@ -404,9 +404,17 @@ internal sealed class LogPresenter : FrameworkElement, IScrollInfo {
             if (visible) {
                 var top = (start - BaseSerial) * LineHeight + Content.Offset.Y;
                 var height = (stop - start + 1) * LineHeight;
-                drawingContext.PushOpacity(SelectionOpacity);
-                drawingContext.DrawRectangle(SystemColors.HighlightBrush, null, new Rect(0, top, ViewportWidth, height));
-                drawingContext.Pop();
+                var rectangle = new Rect(0, top, ViewportWidth, height);
+                var brush = Owner.LogSelectionBackground;
+                bool usesDefault = brush is null;
+                if (usesDefault) {
+                    drawingContext.PushOpacity(SelectionOpacity);
+                    drawingContext.DrawRectangle(SystemColors.HighlightBrush, null, rectangle);
+                    drawingContext.Pop();
+                }
+                else {
+                    drawingContext.DrawRectangle(brush, null, rectangle);
+                }
             }
         }
         SelectionIsDrawn = true;

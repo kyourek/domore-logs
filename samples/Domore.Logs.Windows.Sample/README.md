@@ -26,7 +26,7 @@ Things to try:
 - **Line limit** binds to `LogLineLimit`. The oldest lines are discarded once the
   limit is reached.
 - **Font size** and **Dark theme** restyle the control through its font and
-  brush properties. See `DarkLogStyle` in
+  brush properties, including `LogSelectionBackground` for selected rows. See `DarkLogStyle` in
   [LogSampleWindow.xaml](LogSampleWindow.xaml).
 - **Log an exception** writes a multi-line entry, and **Log Unicode and a long
   line** shows font fallback, right-to-left text, and horizontal scrolling.
