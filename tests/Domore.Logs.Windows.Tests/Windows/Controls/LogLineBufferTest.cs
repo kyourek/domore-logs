@@ -1,4 +1,4 @@
-﻿using Domore.Windows.Controls.Mocks;
+﻿using Domore.Logs;
 using NUnit.Framework;
 using System;
 using System.Linq;
@@ -7,10 +7,8 @@ namespace Domore.Windows.Controls;
 
 [TestFixture]
 public sealed class LogLineBufferTest {
-    private static readonly MockLogEntry Entry = new();
-
     private static LogLine Line(string text) {
-        return new LogLine(Entry, text, 0, text.Length, LogLineKind.Indented);
+        return new LogLine(DateTime.UtcNow, LogSeverity.Info, "Mock", text, 0, text.Length, LogLineKind.Indented);
     }
 
     private static string[] Texts(LogLineBuffer buffer) {

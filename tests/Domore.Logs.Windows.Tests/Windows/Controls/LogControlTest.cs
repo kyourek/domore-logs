@@ -4,7 +4,9 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
+using System.Windows.Controls;
 using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
@@ -86,6 +88,116 @@ public sealed class LogControlTest {
         control.Measure(new Size(width, height));
         control.Arrange(new Rect(0, 0, width, height));
         control.UpdateLayout();
+    }
+
+    private static int[] Pixels(FrameworkElement root, int width, int height) {
+        root.Measure(new Size(width, height));
+        root.Arrange(new Rect(0, 0, width, height));
+        root.UpdateLayout();
+        var bitmap = new RenderTargetBitmap(width, height, 96, 96, PixelFormats.Pbgra32);
+        bitmap.Render(root);
+        var pixels = new int[width * height];
+        bitmap.CopyPixels(pixels, width * 4, 0);
+        return pixels;
+    }
+
+    /*
+     * Renders one long log line, scrolled horizontally, inside a parent with
+     * the given flow direction. Scroll bars are hidden because they follow the
+     * flow direction by design.
+     */
+    private static async Task<int[]> RenderLongLine(FlowDirection flowDirection, double horizontalOffset) {
+        var scrollViewerStyle = new Style(typeof(ScrollViewer));
+        scrollViewerStyle.Setters.Add(new Setter(ScrollViewer.HorizontalScrollBarVisibilityProperty, ScrollBarVisibility.Hidden));
+        scrollViewerStyle.Setters.Add(new Setter(ScrollViewer.VerticalScrollBarVisibilityProperty, ScrollBarVisibility.Hidden));
+        var control = Attached(c => {
+            c.Background = Brushes.White;
+            c.Foreground = Brushes.Black;
+            c.ScrollViewerStyle = scrollViewerStyle;
+        });
+        try {
+            var root = new Border { FlowDirection = flowDirection, Child = control };
+            control.BeginInit();
+            control.EndInit();
+            FirstLog.Info(string.Concat(Enumerable.Repeat("ABCDEFG readable 123 ", 15)));
+            await Lines(control);
+            Pixels(root, 400, 40);
+            control.Presenter.SetHorizontalOffset(horizontalOffset);
+            return Pixels(root, 400, 40);
+        }
+        finally {
+            control.Detach();
+        }
+    }
+
+    private static int White {
+        get {
+            return unchecked((int)0xFFFFFFFF);
+        }
+    }
+
+    /*
+     * Returns the share of pixels that are not background in either image and
+     * are the same in both.
+     */
+    private static double Agreement(int[] first, int[] second) {
+        var ink = 0;
+        var same = 0;
+        for (var i = 0; i < first.Length; i++) {
+            bool background = first[i] == White && second[i] == White;
+            if (background) {
+                continue;
+            }
+            ink++;
+            bool equal = first[i] == second[i];
+            if (equal) {
+                same++;
+            }
+        }
+        return ink == 0 ? 0 : (double)same / ink;
+    }
+
+    private sealed class CaptureSubscription : ILogSubscription {
+        public WeakReference Entry { get; private set; }
+        public WeakReference Text { get; private set; }
+
+        public event EventHandler ThresholdChanged {
+            add { }
+            remove { }
+        }
+
+        public LogSeverity Threshold(Type type) {
+            return LogSeverity.Info;
+        }
+
+        public void Receive(ILogEntry entry) {
+            Entry = new WeakReference(entry);
+            Text = new WeakReference(entry.LogList.First());
+        }
+    }
+
+    /*
+     * Logs a message while observing its entry and text weakly. These helpers
+     * are not inlined so that no local keeps the message alive.
+     */
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    private static string Lined(int count, int width) {
+        return string.Join(((char)10).ToString(), Enumerable.Range(0, count).Select(i => i.ToString().PadLeft(width, '.')));
+    }
+
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    private static CaptureSubscription LogCaptured(int count, int width) {
+        var capture = new CaptureSubscription();
+        Assert.That(Logging.Subscribe(capture), Is.True);
+        FirstLog.Info(Lined(count, width));
+        Logging.Unsubscribe(capture);
+        return capture;
+    }
+
+    private static void Collect() {
+        GC.Collect();
+        GC.WaitForPendingFinalizers();
+        GC.Collect();
     }
 
     [TearDown]
@@ -429,6 +541,49 @@ public sealed class LogControlTest {
             Assert.That(presenter.GetWheelDistance(3), Is.EqualTo(3 * lineHeight).Within(0.001), "Three lines");
             Assert.That(presenter.GetWheelDistance(1000), Is.EqualTo(presenter.ViewportHeight), "More lines than fit");
             Assert.That(presenter.GetWheelDistance(0), Is.EqualTo(0), "No lines");
+        });
+    }
+
+    [TestCase(0.0)]
+    [TestCase(150.0)]
+    public void TextIsNotMirroredInRightToLeftParent(double horizontalOffset) {
+        WpfTestThread.Run(async () => {
+            var leftToRight = await RenderLongLine(FlowDirection.LeftToRight, horizontalOffset);
+            var rightToLeft = await RenderLongLine(FlowDirection.RightToLeft, horizontalOffset);
+            Assert.That(leftToRight.Count(pixel => pixel != White), Is.GreaterThan(100), "Nothing was drawn.");
+            Assert.That(Agreement(leftToRight, rightToLeft), Is.GreaterThan(0.8));
+        });
+    }
+
+    [Test]
+    public void DiscardedLinesDoNotKeepSourceEntryAlive() {
+        WpfTestThread.Run(async () => {
+            var control = Attached(c => c.LineLimit = 2);
+            var capture = LogCaptured(20000, 50);
+            var lines = await Lines(control);
+            Collect();
+            Assert.That(capture.Entry.IsAlive, Is.False, "The entry is kept by a buffered line.");
+            Assert.That(capture.Text.IsAlive, Is.False, "A discarded message is kept by a buffered line.");
+            Assert.That(lines, Is.EqualTo(new[] {
+                "  " + "19998".PadLeft(50, '.'),
+                "  " + "19999".PadLeft(50, '.')
+            }));
+        });
+    }
+
+    [Test]
+    public void BufferedLinesDoNotKeepSourceEntryAlive() {
+        WpfTestThread.Run(async () => {
+            var control = Attached();
+            var capture = LogCaptured(3, 100000);
+            var lines = await Lines(control);
+            Collect();
+            Assert.That(capture.Entry.IsAlive, Is.False, "The entry is kept by a buffered line.");
+            Assert.That(lines.Skip(1), Is.EqualTo(new[] {
+                "  " + "0".PadLeft(100000, '.'),
+                "  " + "1".PadLeft(100000, '.'),
+                "  " + "2".PadLeft(100000, '.')
+            }));
         });
     }
 

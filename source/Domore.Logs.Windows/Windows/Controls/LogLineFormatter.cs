@@ -26,7 +26,7 @@ internal static class LogLineFormatter {
         };
     }
 
-    private static void AddMessage(LogLineBuffer lines, ILogEntry entry, string message, LogLineKind kind) {
+    private static void AddMessage(LogLineBuffer lines, LogLine header, string message, LogLineKind kind) {
         var text = message ?? string.Empty;
         var start = 0;
         var more = true;
@@ -39,7 +39,7 @@ internal static class LogLineFormatter {
             if (endsWithReturn) {
                 length--;
             }
-            lines.Add(new LogLine(entry, text, start, length, kind));
+            lines.Add(new LogLine(header.Date, header.Severity, header.Name, text, start, length, kind));
             start = stop + 1;
         }
     }
@@ -57,8 +57,8 @@ internal static class LogLineFormatter {
         return position + text.Length;
     }
 
-    private static int WriteHeader(char[] buffer, int position, ILogEntry entry) {
-        var time = entry.LogDate.ToLocalTime();
+    private static int WriteHeader(char[] buffer, int position, LogLine line) {
+        var time = line.Date.ToLocalTime();
         position = WriteDigits(buffer, position, time.Hour, 2);
         buffer[position++] = ':';
         position = WriteDigits(buffer, position, time.Minute, 2);
@@ -67,9 +67,9 @@ internal static class LogLineFormatter {
         buffer[position++] = '.';
         position = WriteDigits(buffer, position, time.Millisecond, 3);
         buffer[position++] = ' ';
-        position = WriteText(buffer, position, Abbreviate(entry.LogSeverity));
+        position = WriteText(buffer, position, Abbreviate(line.Severity));
         buffer[position++] = ' ';
-        return WriteText(buffer, position, entry.LogName ?? string.Empty);
+        return WriteText(buffer, position, line.Name);
     }
 
     private static int WriteSegment(char[] buffer, int position, string text, int start, int length) {
@@ -95,20 +95,20 @@ internal static class LogLineFormatter {
      */
     public static void Split(ILogEntry entry, LogLineBuffer lines) {
         var messages = entry.LogList as IList<string> ?? entry.LogList?.ToArray() ?? [];
+        var header = new LogLine(entry.LogDate, entry.LogSeverity, entry.LogName, null, 0, 0, LogLineKind.Header);
         bool single = messages.Count == 1;
         if (single) {
-            AddMessage(lines, entry, messages[0], LogLineKind.Headed);
+            AddMessage(lines, header, messages[0], LogLineKind.Headed);
             return;
         }
-        lines.Add(new LogLine(entry, null, 0, 0, LogLineKind.Header));
+        lines.Add(header);
         for (var i = 0; i < messages.Count; i++) {
-            AddMessage(lines, entry, messages[i], LogLineKind.Indented);
+            AddMessage(lines, header, messages[i], LogLineKind.Indented);
         }
     }
 
     public static int Write(LogLine line, ref char[] buffer) {
-        var nameLength = line.Entry.LogName?.Length ?? 0;
-        var capacity = HeaderPadding + nameLength + TabWidth * line.Length;
+        var capacity = HeaderPadding + line.Name.Length + TabWidth * line.Length;
         bool bufferIsSmall = buffer.Length < capacity;
         if (bufferIsSmall) {
             buffer = new char[Math.Max(capacity, 2 * buffer.Length)];
@@ -116,10 +116,10 @@ internal static class LogLineFormatter {
         var position = 0;
         switch (line.Kind) {
             case LogLineKind.Header:
-                position = WriteHeader(buffer, position, line.Entry);
+                position = WriteHeader(buffer, position, line);
                 break;
             case LogLineKind.Headed:
-                position = WriteHeader(buffer, position, line.Entry);
+                position = WriteHeader(buffer, position, line);
                 buffer[position++] = ' ';
                 position = WriteSegment(buffer, position, line.Message, line.Start, line.Length);
                 break;

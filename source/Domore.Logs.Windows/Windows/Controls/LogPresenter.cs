@@ -364,6 +364,12 @@ internal sealed class LogPresenter : FrameworkElement, IScrollInfo {
         Owner = owner ?? throw new ArgumentNullException(nameof(owner));
         Lines = new LogLineBuffer(lineLimit);
         ClipToBounds = true;
+        /*
+         * Text is drawn in left-to-right coordinates, so an inherited right-to-left
+         * flow direction would mirror it. The surrounding template still follows
+         * the application's flow direction.
+         */
+        FlowDirection = FlowDirection.LeftToRight;
         AddVisualChild(Content);
     }
 
