@@ -74,6 +74,159 @@ public sealed class LogStreamingTest {
         });
     }
 
+    private static IEnumerable<KeyValuePair<GlyphRun, Matrix>> LocatedRuns(Drawing drawing, Matrix parent) {
+        bool isRun = drawing is GlyphRunDrawing;
+        if (isRun) {
+            yield return new KeyValuePair<GlyphRun, Matrix>(((GlyphRunDrawing)drawing).GlyphRun, parent);
+        }
+        bool isGroup = drawing is DrawingGroup;
+        if (isGroup) {
+            var group = (DrawingGroup)drawing;
+            var transform = group.Transform?.Value ?? Matrix.Identity;
+            transform.Append(parent);
+            foreach (var child in group.Children) {
+                foreach (var run in LocatedRuns(child, transform)) {
+                    yield return run;
+                }
+            }
+        }
+    }
+
+    private static double[] CharacterOrigins(LogPresenter presenter, char character) {
+        var origins = new List<double>();
+        var container = VisualTreeHelper.GetChild(presenter, 0);
+        for (var visualIndex = 0; visualIndex < VisualTreeHelper.GetChildrenCount(container); visualIndex++) {
+            var visual = (DrawingVisual)VisualTreeHelper.GetChild(container, visualIndex);
+            foreach (var located in LocatedRuns(visual.Drawing, Matrix.Identity)) {
+                var run = located.Key;
+                bool hasCharacters = run.Characters is not null;
+                if (hasCharacters) {
+                    var advances = new double[run.AdvanceWidths.Count + 1];
+                    for (var i = 0; i < run.AdvanceWidths.Count; i++) {
+                        advances[i + 1] = advances[i] + run.AdvanceWidths[i];
+                    }
+                    for (var i = 0; i < run.Characters.Count; i++) {
+                        bool matches = run.Characters[i] == character;
+                        if (matches) {
+                            var cluster = run.ClusterMap is null ? i : run.ClusterMap[i];
+                            var direction = run.BidiLevel % 2 == 0 ? 1 : -1;
+                            var point = new Point(run.BaselineOrigin.X + direction * advances[cluster], run.BaselineOrigin.Y);
+                            origins.Add(located.Value.Transform(point).X);
+                        }
+                    }
+                }
+            }
+        }
+        return origins.ToArray();
+    }
+
+    [TestCase(false, 9000)]
+    [TestCase(true, 9000)]
+    [TestCase(true, 9576)]
+    [TestCase(true, 9577)]
+    [TestCase(true, 9578)]
+    [TestCase(true, 9579)]
+    [TestCase(true, 9580)]
+    public void LongRtlRunKeepsVisualOrderAcrossContinuations(bool withSpaces, int firstCount) {
+        WpfTestThread.Run(() => {
+            var separator = withSpaces ? " , " : "";
+            var message = "P " + new string('\u05D0', firstCount) + separator +
+                new string('\u05D1', 9000) + separator + new string('\u05D2', 9000) + " Z";
+            var presenter = Presenter(message, "Arial");
+            var first = CharacterOrigins(presenter, '\u05D0');
+            var middle = CharacterOrigins(presenter, '\u05D1');
+            var last = CharacterOrigins(presenter, '\u05D2');
+            Assert.That(first, Has.Length.EqualTo(firstCount));
+            Assert.That(middle, Has.Length.EqualTo(9000));
+            Assert.That(last, Has.Length.EqualTo(9000));
+            Assert.That(last.Max(), Is.LessThan(middle.Min()), "The logical suffix must be left of the middle RTL segment.");
+            Assert.That(middle.Max(), Is.LessThan(first.Min()), "The middle RTL segment must be left of the logical prefix.");
+            Assert.That(CharacterOrigins(presenter, 'P').Max(), Is.LessThan(last.Min()));
+            Assert.That(CharacterOrigins(presenter, 'Z').Min(), Is.GreaterThan(first.Max()));
+            return Task.CompletedTask;
+        });
+    }
+
+    [Test]
+    public void LongMixedDirectionGroupsKeepLatinSeparatorBetweenThem() {
+        WpfTestThread.Run(() => {
+            var message = "P " + new string('\u05D0', 9000) + new string('\u05D1', 9000) +
+                " Q " + new string('\u05D2', 9000) + new string('\u05D3', 9000) + " Z";
+            var presenter = Presenter(message, "Arial");
+            var alef = CharacterOrigins(presenter, '\u05D0');
+            var bet = CharacterOrigins(presenter, '\u05D1');
+            var gimel = CharacterOrigins(presenter, '\u05D2');
+            var dalet = CharacterOrigins(presenter, '\u05D3');
+            Assert.That(alef, Has.Length.EqualTo(9000));
+            Assert.That(bet, Has.Length.EqualTo(9000));
+            Assert.That(gimel, Has.Length.EqualTo(9000));
+            Assert.That(dalet, Has.Length.EqualTo(9000));
+            Assert.That(bet.Max(), Is.LessThan(alef.Min()));
+            Assert.That(dalet.Max(), Is.LessThan(gimel.Min()));
+            Assert.That(CharacterOrigins(presenter, 'Q').Min(), Is.GreaterThan(alef.Max()));
+            Assert.That(CharacterOrigins(presenter, 'Q').Max(), Is.LessThan(dalet.Min()));
+            return Task.CompletedTask;
+        });
+    }
+
+    [Test]
+    public void LongArabicRunKeepsVisualOrderAcrossContinuations() {
+        WpfTestThread.Run(() => {
+            var message = "P " + new string('\u0628', 9000) + new string('\u062C', 9000) + new string('\u062F', 9000) + " Z";
+            var presenter = Presenter(message, "Arial");
+            var first = CharacterOrigins(presenter, '\u0628');
+            var middle = CharacterOrigins(presenter, '\u062C');
+            var last = CharacterOrigins(presenter, '\u062F');
+            Assert.That(first, Has.Length.EqualTo(9000));
+            Assert.That(middle, Has.Length.EqualTo(9000));
+            Assert.That(last, Has.Length.EqualTo(9000));
+            Assert.That(last.Max(), Is.LessThan(middle.Min()));
+            Assert.That(middle.Max(), Is.LessThan(first.Min()));
+            return Task.CompletedTask;
+        });
+    }
+
+    [TestCase(3)]
+    [TestCase(9000)]
+    public void NumbersWithinLongRtlTextKeepTheirLeftToRightOrder(int count) {
+        WpfTestThread.Run(() => {
+            var message = "P " + new string('\u05D0', count) + " 123 " + new string('\u05D1', count) + " Z";
+            var presenter = Presenter(message, "Arial");
+            var first = CharacterOrigins(presenter, '\u05D0');
+            var last = CharacterOrigins(presenter, '\u05D1');
+            var one = CharacterOrigins(presenter, '1');
+            var two = CharacterOrigins(presenter, '2');
+            var three = CharacterOrigins(presenter, '3');
+            Assert.That(last.Max(), Is.LessThan(one.Max()));
+            Assert.That(one.Max(), Is.LessThan(two.Max()));
+            Assert.That(two.Max(), Is.LessThan(three.Max()));
+            Assert.That(three.Max(), Is.LessThan(first.Min()));
+            return Task.CompletedTask;
+        });
+    }
+
+
+    [Test]
+    public void ManyAlternatingDirectionRunsPreserveEachRtlPair() {
+        WpfTestThread.Run(() => {
+            var message = "P " + string.Concat(Enumerable.Repeat("L\u05D0\u05D1 ", 5000)) + " Z";
+            var presenter = Presenter(message, "Arial");
+            var alef = CharacterOrigins(presenter, '\u05D0');
+            var bet = CharacterOrigins(presenter, '\u05D1');
+            Assert.That(alef, Has.Length.EqualTo(5000));
+            Assert.That(bet, Has.Length.EqualTo(5000));
+            for (var i = 0; i < alef.Length; i++) {
+                Assert.That(bet[i], Is.LessThan(alef[i]), "Each Hebrew pair must read right to left.");
+                bool hasNext = i + 1 < alef.Length;
+                if (hasNext) {
+                    Assert.That(alef[i], Is.LessThan(bet[i + 1]), "Latin separators must keep the groups in order.");
+                }
+            }
+            return Task.CompletedTask;
+        });
+    }
+
+
     [TestCase(1)]
     [TestCase(2)]
     [TestCase(8)]

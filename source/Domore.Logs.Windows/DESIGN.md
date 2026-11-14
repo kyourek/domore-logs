@@ -24,7 +24,10 @@ The original strings stay referenced so line splitting avoids substring copies.
 The presenter retains only viewport drawings and reuses their visual objects
 when scrolling. WPF TextFormatter provides shaping, direction, and fallback.
 Formatter continuations are drawn consecutively on the same logical row instead
-of discarding the suffix or wrapping it into another history row. One formatter
+of discarding the suffix or wrapping it into another history row. For rows that
+span formatter continuations, Windows Uniscribe analyzes the full paragraph's
+bidi levels and the WPF-shaped glyph runs are placed in paragraph visual order.
+Ordinary rows keep the direct TextLine drawing path. One formatter
 is created per realization pass and disposed after drawing; TextLine and
 TextLineBreak resources are disposed promptly.
 

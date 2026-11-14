@@ -106,11 +106,12 @@ internal sealed class LogPresenter : FrameworkElement, IScrollInfo {
 
     private double Draw(TextFormatter formatter, DrawingVisual visual, LogLine line) {
         var text = LogLineFormatter.Format(line);
-        var properties = new LogTextProperties(Typeface, FontEmSize, GetBrush(line.Severity), PixelsPerDip);
+        var brush = GetBrush(line.Severity);
+        var properties = new LogTextProperties(Typeface, FontEmSize, brush, PixelsPerDip);
         var source = new LogTextSource(text, properties, PixelsPerDip);
         var paragraph = new LogParagraphProperties(properties);
-        var x = 0.0;
         var position = 0;
+        List<IndexedGlyphRun> runs = null;
         TextLineBreak previous = null;
         using (var drawing = visual.RenderOpen()) {
             try {
@@ -119,8 +120,13 @@ internal sealed class LogPresenter : FrameworkElement, IScrollInfo {
                     using (var formatted = formatter.FormatLine(source, position, 0, paragraph, previous)) {
                         previous?.Dispose();
                         previous = null;
-                        formatted.Draw(drawing, new Point(x, Baseline - formatted.Baseline), InvertAxes.None);
-                        x += formatted.WidthIncludingTrailingWhitespace;
+                        bool completeRow = position == 0 && formatted.Length >= text.Length;
+                        if (completeRow) {
+                            formatted.Draw(drawing, new Point(0, Baseline - formatted.Baseline), InvertAxes.None);
+                            return formatted.WidthIncludingTrailingWhitespace;
+                        }
+                        runs ??= [];
+                        runs.AddRange(formatted.GetIndexedGlyphRuns());
                         position += formatted.Length;
                         previous = formatted.GetTextLineBreak();
                     }
@@ -130,8 +136,48 @@ internal sealed class LogPresenter : FrameworkElement, IScrollInfo {
             finally {
                 previous?.Dispose();
             }
+            /*
+             * Formatter continuations are logical fragments, not visual rows.
+             * Restore logical run order, then apply bidi rule L2 over the row.
+             */
+            runs.Sort((left, right) => left.TextSourceCharacterIndex.CompareTo(right.TextSourceCharacterIndex));
+            var levels = LogBidi.GetLevels(text, runs);
+            var highestLevel = 0;
+            var lowestOddLevel = int.MaxValue;
+            foreach (var level in levels) {
+                highestLevel = Math.Max(highestLevel, level);
+                bool odd = (level & 1) != 0;
+                if (odd) {
+                    lowestOddLevel = Math.Min(lowestOddLevel, level);
+                }
+            }
+            for (var level = highestLevel; level >= lowestOddLevel; level--) {
+                var start = 0;
+                for (var i = 0; i <= runs.Count; i++) {
+                    bool endsSequence = i == runs.Count || levels[i] < level;
+                    if (endsSequence) {
+                        runs.Reverse(start, i - start);
+                        Array.Reverse(levels, start, i - start);
+                        start = i + 1;
+                    }
+                }
+            }
+            var x = 0.0;
+            foreach (var indexed in runs) {
+                var run = indexed.GlyphRun;
+                var width = 0.0;
+                foreach (var advance in run.AdvanceWidths) {
+                    width += advance;
+                }
+                bool rtl = (run.BidiLevel & 1) != 0;
+                var origin = rtl ? x + width : x;
+                drawing.PushTransform(new TranslateTransform(origin - run.BaselineOrigin.X, Baseline - run.BaselineOrigin.Y));
+                drawing.DrawGlyphRun(brush, run);
+                drawing.Pop();
+                x += width;
+            }
+            return x;
         }
-        return x;
     }
 
     private void Realize() {
