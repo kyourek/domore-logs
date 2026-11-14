@@ -1,0 +1,33 @@
+﻿<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:dwc="clr-namespace:Domore.Windows.Controls">
+  <Style x:Key="_LogScrollViewerStyleDefault" TargetType="ScrollViewer">
+    <Setter Property="HorizontalScrollBarVisibility" Value="Auto"/>
+    <Setter Property="VerticalScrollBarVisibility" Value="Auto"/>
+  </Style>
+  <ControlTemplate x:Key="_LogControlTemplate" TargetType="{x:Type dwc:LogControl}">
+    <Border Background="{TemplateBinding Background}"
+            BorderBrush="{TemplateBinding BorderBrush}"
+            BorderThickness="{TemplateBinding BorderThickness}"
+            SnapsToDevicePixels="True">
+      <ScrollViewer x:Name="PART_ScrollViewer"
+                    CanContentScroll="True"
+                    Style="{Binding ScrollViewerStyle,
+                                    RelativeSource={RelativeSource TemplatedParent},
+                                    TargetNullValue={StaticResource _LogScrollViewerStyleDefault}}"/>
+    </Border>
+  </ControlTemplate>
+  <Style TargetType="{x:Type dwc:LogControl}" x:Key="LogControlStyle">
+    <Setter Property="Background" Value="{DynamicResource {x:Static SystemColors.WindowBrushKey}}"/>
+    <Setter Property="Foreground" Value="{DynamicResource {x:Static SystemColors.WindowTextBrushKey}}"/>
+    <Setter Property="FontFamily" Value="Consolas"/>
+    <Setter Property="Padding" Value="2"/>
+    <Setter Property="DebugForeground" Value="Gray"/>
+    <Setter Property="WarnForeground" Value="DarkGoldenrod"/>
+    <Setter Property="ErrorForeground" Value="Crimson"/>
+    <Setter Property="CriticalForeground" Value="Red"/>
+  </Style>
+  <Style TargetType="{x:Type dwc:LogControl}" BasedOn="{StaticResource LogControlStyle}">
+    <Setter Property="Template" Value="{StaticResource _LogControlTemplate}"/>
+  </Style>
+</ResourceDictionary>

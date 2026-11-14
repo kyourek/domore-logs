@@ -203,8 +203,8 @@ code more complicated, such as when the field must be `volatile`.
 
 ## Project structure
 
-- `domore-logs.slnx` is the solution entry point. It contains two packable
-  libraries, one sample application, and two test projects.
+- `domore-logs.slnx` is the solution entry point. It contains three packable
+  libraries, one sample application, and three test projects.
 - Root build configuration:
   - `global.json` selects the .NET 10.0.100 SDK.
   - `Directory.Build.props` defines common package metadata and C# settings.
@@ -223,8 +223,16 @@ code more complicated, such as when the field must be `volatile`.
     - `Properties/AssemblyInfo.cs` contains assembly-level metadata.
   - `Domore.Logs.Conf/` contains the `Domore.Logs.Conf` library, which
     configures `Domore.Logs` from the external `Domore.Conf` package.
+  - `Domore.Logs.Windows/` contains the `Domore.Logs.Windows` WPF library,
+    which overrides the shared targets with `net462`, `net48`,
+    `net8.0-windows`, and `net10.0-windows`.
+    - `Windows/Controls/` holds the public `LogControl` and its internal
+      subscription, filter, line buffer, glyph table, line formatter, and
+      retained glyph-run presenter.
+    - `Themes/Generic.xaml` merges the default style from
+      `Resources/Styles.xaml`.
 - `samples/Domore.Logs.Sample/` is a non-packable console sample that
-  references both library projects. Its build settings target `net40`,
+  references the `Domore.Logs` and `Domore.Logs.Conf` projects. Its build settings target `net40`,
   `net462`, and `net10.0`.
 - `tests/` contains non-packable NUnit test projects:
   - `Directory.Build.props` supplies the test SDK, NUnit, test analyzer, and
@@ -233,6 +241,9 @@ code more complicated, such as when the field must be `volatile`.
     `Logs/` and `Logs/Services/`; reusable doubles live in `Logs/Mocks/`.
   - `Domore.Logs.ProcessExitProbe/` is a `net10.0` executable used by
     process-exit tests.
+  - `Domore.Logs.Windows.Tests/` tests `Domore.Logs.Windows` on WPF targets
+    `net462`, `net48`, `net8.0-windows`, and `net10.0-windows`. Tests run
+    on an STA dispatcher through `Windows/WpfTestThread.cs`.
 - `.github/workflows/workflow.yml` restores, builds, and tests on pushes to
   `dev`, and packs and pushes NuGet packages for published releases.
 - Root documentation and repository files include `README.md`, `LICENSE`,

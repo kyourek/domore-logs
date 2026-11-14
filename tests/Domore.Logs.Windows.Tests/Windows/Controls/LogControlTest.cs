@@ -1,0 +1,348 @@
+﻿using Domore.Logs;
+using NUnit.Framework;
+using System;
+using System.Collections.ObjectModel;
+using System.Linq;
+using System.Threading.Tasks;
+using System.Windows;
+using System.Windows.Media;
+using System.Windows.Media.Imaging;
+using System.Windows.Threading;
+
+namespace Domore.Windows.Controls;
+
+[TestFixture]
+public sealed class LogControlTest {
+    private static readonly ILog FirstLog = Logging.For(typeof(FirstType));
+    private static readonly ILog SecondLog = Logging.For(typeof(SecondType));
+    private static readonly ILog ThirdLog = Logging.For(typeof(ThirdType));
+
+    private sealed class FirstType {
+    }
+
+    private sealed class SecondType {
+    }
+
+    private sealed class ThirdType {
+    }
+
+    /*
+     * Pending entries are flushed at background priority, which runs before
+     * the context-idle continuation of this yield.
+     */
+    private static async Task<string[]> Lines(LogControl control) {
+        await Dispatcher.Yield(DispatcherPriority.ContextIdle);
+        var lines = control.Presenter.Lines;
+        return Enumerable.Range(0, lines.Count).Select(i => LogLineFormatter.Format(lines[i])).ToArray();
+    }
+
+    private static string[] Messages(string[] lines) {
+        return lines.Select(line => line.Substring(line.IndexOf(' ') + 1)).ToArray();
+    }
+
+    private static LogControl Attached(Action<LogControl> configure = null) {
+        var control = new LogControl();
+        configure?.Invoke(control);
+        Assert.That(control.Attach(), Is.True);
+        return control;
+    }
+
+    private static void Layout(LogControl control, double width, double height) {
+        bool initialized = control.IsInitialized;
+        if (initialized == false) {
+            control.BeginInit();
+            control.EndInit();
+        }
+        control.ApplyTemplate();
+        control.Measure(new Size(width, height));
+        control.Arrange(new Rect(0, 0, width, height));
+        control.UpdateLayout();
+    }
+
+    [TearDown]
+    public void TearDown() {
+        Logging.Complete();
+    }
+
+    [Test]
+    public void DisplaysEntriesAtOrAboveThreshold() {
+        WpfTestThread.Run(async () => {
+            var control = Attached(c => c.Threshold = LogSeverity.Warn);
+            FirstLog.Info("info");
+            FirstLog.Warn("warn");
+            FirstLog.Critical("critical");
+            var lines = await Lines(control);
+            Assert.That(Messages(lines), Is.EqualTo(new[] {
+                "wrn FirstType warn",
+                "crt FirstType critical"
+            }));
+        });
+    }
+
+    [Test]
+    public void DefaultThresholdIsInfo() {
+        WpfTestThread.Run(async () => {
+            var control = Attached();
+            FirstLog.Debug("debug");
+            FirstLog.Info("info");
+            var lines = await Lines(control);
+            Assert.That(control.Threshold, Is.EqualTo(LogSeverity.Info));
+            Assert.That(Messages(lines), Is.EqualTo(new[] { "inf FirstType info" }));
+        });
+    }
+
+    [Test]
+    public void ThresholdNoneDisplaysNothing() {
+        WpfTestThread.Run(async () => {
+            var control = Attached(c => c.Threshold = LogSeverity.None);
+            FirstLog.Critical("critical");
+            Assert.That(await Lines(control), Is.Empty);
+        });
+    }
+
+    [Test]
+    public void ChangingThresholdAppliesToLaterEntries() {
+        WpfTestThread.Run(async () => {
+            var control = Attached(c => c.Threshold = LogSeverity.Error);
+            FirstLog.Info("before");
+            control.Threshold = LogSeverity.Debug;
+            FirstLog.Debug("after");
+            var lines = await Lines(control);
+            Assert.That(Messages(lines), Is.EqualTo(new[] { "dbg FirstType after" }));
+        });
+    }
+
+    [Test]
+    public void LogTypesRestrictDisplayedEntries() {
+        WpfTestThread.Run(async () => {
+            var control = Attached(c => c.LogTypes = [typeof(SecondType)]);
+            FirstLog.Info("first");
+            SecondLog.Info("second");
+            var lines = await Lines(control);
+            Assert.That(Messages(lines), Is.EqualTo(new[] { "inf SecondType second" }));
+        });
+    }
+
+    [Test]
+    public void LogNamesRestrictDisplayedEntries() {
+        WpfTestThread.Run(async () => {
+            var control = Attached(c => c.LogNames = [nameof(FirstType)]);
+            FirstLog.Info("first");
+            SecondLog.Info("second");
+            var lines = await Lines(control);
+            Assert.That(Messages(lines), Is.EqualTo(new[] { "inf FirstType first" }));
+        });
+    }
+
+    [Test]
+    public void LogTypesAndLogNamesAreCombined() {
+        WpfTestThread.Run(async () => {
+            var control = Attached(c => {
+                c.LogTypes = [typeof(FirstType)];
+                c.LogNames = [nameof(SecondType)];
+            });
+            FirstLog.Info("first");
+            SecondLog.Info("second");
+            ThirdLog.Info("third");
+            var lines = await Lines(control);
+            Assert.That(Messages(lines), Is.EqualTo(new[] {
+                "inf FirstType first",
+                "inf SecondType second"
+            }));
+        });
+    }
+
+    [Test]
+    public void ObservableLogNamesChangesAreApplied() {
+        WpfTestThread.Run(async () => {
+            var names = new ObservableCollection<string> { nameof(FirstType) };
+            var control = Attached(c => c.LogNames = names);
+            SecondLog.Info("excluded");
+            names.Add(nameof(SecondType));
+            SecondLog.Info("included");
+            var lines = await Lines(control);
+            Assert.That(Messages(lines), Is.EqualTo(new[] { "inf SecondType included" }));
+        });
+    }
+
+    [Test]
+    public void ReplacedObservableLogNamesAreNoLongerObserved() {
+        WpfTestThread.Run(async () => {
+            var names = new ObservableCollection<string> { nameof(FirstType) };
+            var control = Attached(c => c.LogNames = names);
+            control.LogNames = [nameof(FirstType)];
+            names.Add(nameof(SecondType));
+            SecondLog.Info("excluded");
+            Assert.That(await Lines(control), Is.Empty);
+        });
+    }
+
+    [Test]
+    public void LineLimitDiscardsOldestLines() {
+        WpfTestThread.Run(async () => {
+            var control = Attached(c => c.LineLimit = 3);
+            for (var i = 0; i < 10; i++) {
+                FirstLog.Info(i);
+            }
+            var lines = await Lines(control);
+            Assert.That(Messages(lines), Is.EqualTo(new[] {
+                "inf FirstType 7",
+                "inf FirstType 8",
+                "inf FirstType 9"
+            }));
+        });
+    }
+
+    [Test]
+    public void LoweringLineLimitDiscardsOldestLines() {
+        WpfTestThread.Run(async () => {
+            var control = Attached();
+            for (var i = 0; i < 5; i++) {
+                FirstLog.Info(i);
+            }
+            await Lines(control);
+            control.LineLimit = 2;
+            var lines = await Lines(control);
+            Assert.That(Messages(lines), Is.EqualTo(new[] {
+                "inf FirstType 3",
+                "inf FirstType 4"
+            }));
+        });
+    }
+
+    [Test]
+    public void LineLimitMustBePositive() {
+        WpfTestThread.Run(() => {
+            var control = new LogControl();
+            Assert.That(() => control.LineLimit = 0, Throws.ArgumentException);
+            return Task.CompletedTask;
+        });
+    }
+
+    [Test]
+    public void MultipleMessagesAreIndentedBelowHeader() {
+        WpfTestThread.Run(async () => {
+            var control = Attached();
+            FirstLog.Info("one", "two\tthree\r\nfour");
+            var lines = await Lines(control);
+            Assert.That(Messages(lines), Is.EqualTo(new[] {
+                "inf FirstType",
+                " one",
+                " two    three",
+                " four"
+            }));
+        });
+    }
+
+    [Test]
+    public void EntriesLoggedOnWorkerThreadsAreDisplayed() {
+        WpfTestThread.Run(async () => {
+            var control = Attached();
+            await Task.WhenAll(Enumerable.Range(0, 4).Select(i => Task.Run(() => {
+                for (var j = 0; j < 25; j++) {
+                    FirstLog.Info(i);
+                }
+            })));
+            var lines = await Lines(control);
+            Assert.That(lines, Has.Length.EqualTo(100));
+        });
+    }
+
+    [Test]
+    public void DetachedControlDoesNotDisplayEntries() {
+        WpfTestThread.Run(async () => {
+            var control = Attached();
+            Assert.That(control.Detach(), Is.True);
+            FirstLog.Info("detached");
+            Assert.That(await Lines(control), Is.Empty);
+        });
+    }
+
+    [Test]
+    public void ViewFollowsNewLinesWhileScrolledToEnd() {
+        WpfTestThread.Run(async () => {
+            var control = Attached();
+            Layout(control, 400, 100);
+            for (var i = 0; i < 100; i++) {
+                FirstLog.Info(i);
+            }
+            await Lines(control);
+            Layout(control, 400, 100);
+            var presenter = control.Presenter;
+            Assert.That(presenter.VerticalOffset, Is.GreaterThan(0));
+            Assert.That(presenter.VerticalOffset, Is.EqualTo(presenter.ExtentHeight - presenter.ViewportHeight));
+        });
+    }
+
+    [Test]
+    public void ViewKeepsItsLinesWhileScrolledAway() {
+        WpfTestThread.Run(async () => {
+            var control = Attached(c => c.LineLimit = 100);
+            Layout(control, 400, 100);
+            for (var i = 0; i < 100; i++) {
+                FirstLog.Info(i);
+            }
+            await Lines(control);
+            var presenter = control.Presenter;
+            var lineHeight = presenter.ExtentHeight / presenter.Lines.Count;
+            presenter.SetVerticalOffset(50 * lineHeight);
+            for (var i = 0; i < 10; i++) {
+                FirstLog.Info(i);
+            }
+            await Lines(control);
+            Assert.That(presenter.VerticalOffset, Is.EqualTo(40 * lineHeight).Within(0.001));
+        });
+    }
+
+    [Test]
+    public void OnlyVisibleLinesAreRealized() {
+        WpfTestThread.Run(async () => {
+            var control = Attached();
+            Layout(control, 400, 100);
+            for (var i = 0; i < 1000; i++) {
+                FirstLog.Info(i);
+            }
+            await Lines(control);
+            control.UpdateLayout();
+            var presenter = control.Presenter;
+            var lineHeight = presenter.ExtentHeight / presenter.Lines.Count;
+            var visibleLines = (int)Math.Ceiling(presenter.ViewportHeight / lineHeight) + 1;
+            Assert.That(presenter.RealizedCount, Is.InRange(1, visibleLines));
+            presenter.SetVerticalOffset(0);
+            control.UpdateLayout();
+            Assert.That(presenter.RealizedCount, Is.InRange(1, visibleLines));
+        });
+    }
+
+    [Test]
+    public void ChangedForegroundRedrawsRealizedLines() {
+        WpfTestThread.Run(async () => {
+            var control = Attached();
+            FirstLog.Info("text");
+            await Lines(control);
+            Layout(control, 400, 100);
+            Assert.That(control.Presenter.RealizedCount, Is.EqualTo(1));
+            control.InfoForeground = Brushes.Red;
+            Assert.That(control.Presenter.RealizedCount, Is.EqualTo(0));
+            control.UpdateLayout();
+            Assert.That(control.Presenter.RealizedCount, Is.EqualTo(1));
+        });
+    }
+
+    [Test]
+    public void RendersGlyphAndFallbackText() {
+        WpfTestThread.Run(async () => {
+            var control = Attached();
+            FirstLog.Info("plain text");
+            FirstLog.Error("fallback 日本語 😀");
+            await Lines(control);
+            Layout(control, 400, 100);
+            var bitmap = new RenderTargetBitmap(400, 100, 96, 96, PixelFormats.Pbgra32);
+            bitmap.Render(control);
+            var pixels = new int[400 * 100];
+            bitmap.CopyPixels(pixels, 400 * 4, 0);
+            Assert.That(pixels.Distinct().Count(), Is.GreaterThan(2));
+            Assert.That(control.Presenter.ExtentWidth, Is.GreaterThan(0));
+        });
+    }
+}
