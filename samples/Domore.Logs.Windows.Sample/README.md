@@ -18,12 +18,12 @@ Things to try:
   per second. The view follows new entries while it is scrolled to the end.
 - **Burst 100,000 entries** logs from four threads at once while the window
   stays responsive.
-- **Threshold** binds to `Threshold`. Entries below it are never formatted,
+- **Threshold** binds to `LogThreshold`. Entries below it are never formatted,
   because the workload checks `ILog.Enabled` first.
 - **Show only these sources** edits an `ObservableCollection<string>` assigned
   to `LogNames`; the control applies each change as it happens. `LogTypes`
   filters by `Type` in the same way.
-- **Line limit** binds to `LineLimit`. The oldest lines are discarded once the
+- **Line limit** binds to `LogLineLimit`. The oldest lines are discarded once the
   limit is reached.
 - **Font size** and **Dark theme** restyle the control through its font and
   brush properties. See `DarkLogStyle` in

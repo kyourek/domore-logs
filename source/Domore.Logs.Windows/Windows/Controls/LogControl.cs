@@ -19,7 +19,7 @@ namespace Domore.Windows.Controls;
 /// The control subscribes to logging through <see cref="Logging.Subscribe(ILogSubscription)"/>
 /// while it is loaded and unsubscribes when it is unloaded. Entries may be logged on any thread;
 /// they are queued and drawn in batches on the control's dispatcher. Only lines inside the
-/// viewport are drawn, and the oldest lines are discarded once <see cref="LineLimit"/> is reached.
+/// viewport are drawn, and the oldest lines are discarded once <see cref="LogLineLimit"/> is reached.
 /// The view follows new entries while it is scrolled to the end.
 /// </para>
 /// <para>
@@ -36,8 +36,8 @@ public sealed class LogControl : Control {
             typeMetadata: new FrameworkPropertyMetadata(typeof(LogControl)));
     }
 
-    private const string ScrollViewerTemplatePartName = "PART_ScrollViewer";
-    private const int DefaultLineLimit = 10000;
+    private const string ScrollViewerTemplatePartName = "PART_LogScrollViewer";
+    private const int LogLineLimitDefault = 10000;
 
     private ScrollViewer ScrollViewerPart;
 
@@ -78,7 +78,7 @@ public sealed class LogControl : Control {
     }
 
     private void UpdateFilter() {
-        Subscription.Filter = new LogFilter(Threshold, LogTypes, LogNames);
+        Subscription.Filter = new LogFilter(LogThreshold, LogTypes, LogNames);
     }
 
     private void Copy(object sender, ExecutedRoutedEventArgs e) {
@@ -167,11 +167,11 @@ public sealed class LogControl : Control {
 
     internal Brush GetSeverityForeground(LogSeverity severity) {
         var brush = severity switch {
-            LogSeverity.Debug => DebugForeground,
-            LogSeverity.Info => InfoForeground,
-            LogSeverity.Warn => WarnForeground,
-            LogSeverity.Error => ErrorForeground,
-            LogSeverity.Critical => CriticalForeground,
+            LogSeverity.Debug => LogDebugForeground,
+            LogSeverity.Info => LogInfoForeground,
+            LogSeverity.Warn => LogWarnForeground,
+            LogSeverity.Error => LogErrorForeground,
+            LogSeverity.Critical => LogCriticalForeground,
             _ => null
         };
         return brush ?? Foreground;
@@ -206,10 +206,10 @@ public sealed class LogControl : Control {
     }
 
     /// <summary>
-    /// Identifies the <see cref="Threshold"/> dependency property.
+    /// Identifies the <see cref="LogThreshold"/> dependency property.
     /// </summary>
-    public static readonly DependencyProperty ThresholdProperty = DependencyProperty.Register(
-        name: nameof(Threshold),
+    public static readonly DependencyProperty LogThresholdProperty = DependencyProperty.Register(
+        name: nameof(LogThreshold),
         propertyType: typeof(LogSeverity),
         ownerType: typeof(LogControl),
         typeMetadata: new PropertyMetadata(
@@ -226,9 +226,9 @@ public sealed class LogControl : Control {
     /// <remarks>
     /// Entries already displayed are kept when the threshold changes.
     /// </remarks>
-    public LogSeverity Threshold {
-        get => (LogSeverity)GetValue(ThresholdProperty);
-        set => SetValue(ThresholdProperty, value);
+    public LogSeverity LogThreshold {
+        get => (LogSeverity)GetValue(LogThresholdProperty);
+        set => SetValue(LogThresholdProperty, value);
     }
 
     /// <summary>
@@ -288,14 +288,14 @@ public sealed class LogControl : Control {
     }
 
     /// <summary>
-    /// Identifies the <see cref="LineLimit"/> dependency property.
+    /// Identifies the <see cref="LogLineLimit"/> dependency property.
     /// </summary>
-    public static readonly DependencyProperty LineLimitProperty = DependencyProperty.Register(
-        name: nameof(LineLimit),
+    public static readonly DependencyProperty LogLineLimitProperty = DependencyProperty.Register(
+        name: nameof(LogLineLimit),
         propertyType: typeof(int),
         ownerType: typeof(LogControl),
         typeMetadata: new PropertyMetadata(
-            defaultValue: DefaultLineLimit,
+            defaultValue: LogLineLimitDefault,
             propertyChangedCallback: (s, e) => {
                 var self = (LogControl)s;
                 var limit = (int)e.NewValue;
@@ -314,15 +314,15 @@ public sealed class LogControl : Control {
     /// When the limit is reached, the oldest lines are discarded as new lines are added.
     /// Lowering the limit discards the oldest lines immediately.
     /// </remarks>
-    public int LineLimit {
-        get => (int)GetValue(LineLimitProperty);
-        set => SetValue(LineLimitProperty, value);
+    public int LogLineLimit {
+        get => (int)GetValue(LogLineLimitProperty);
+        set => SetValue(LogLineLimitProperty, value);
     }
 
     /// <summary>
-    /// Identifies the <see cref="DebugForeground"/> dependency property.
+    /// Identifies the <see cref="LogDebugForeground"/> dependency property.
     /// </summary>
-    public static readonly DependencyProperty DebugForegroundProperty = RegisterForeground(nameof(DebugForeground));
+    public static readonly DependencyProperty LogDebugForegroundProperty = RegisterForeground(nameof(LogDebugForeground));
 
     /// <summary>
     /// Gets or sets the brush used to draw <see cref="LogSeverity.Debug"/> entries.
@@ -330,15 +330,15 @@ public sealed class LogControl : Control {
     /// <value>
     /// A brush, or null to use <see cref="Control.Foreground"/>.
     /// </value>
-    public Brush DebugForeground {
-        get => GetValue(DebugForegroundProperty) as Brush;
-        set => SetValue(DebugForegroundProperty, value);
+    public Brush LogDebugForeground {
+        get => GetValue(LogDebugForegroundProperty) as Brush;
+        set => SetValue(LogDebugForegroundProperty, value);
     }
 
     /// <summary>
-    /// Identifies the <see cref="InfoForeground"/> dependency property.
+    /// Identifies the <see cref="LogInfoForeground"/> dependency property.
     /// </summary>
-    public static readonly DependencyProperty InfoForegroundProperty = RegisterForeground(nameof(InfoForeground));
+    public static readonly DependencyProperty LogInfoForegroundProperty = RegisterForeground(nameof(LogInfoForeground));
 
     /// <summary>
     /// Gets or sets the brush used to draw <see cref="LogSeverity.Info"/> entries.
@@ -346,15 +346,15 @@ public sealed class LogControl : Control {
     /// <value>
     /// A brush, or null to use <see cref="Control.Foreground"/>.
     /// </value>
-    public Brush InfoForeground {
-        get => GetValue(InfoForegroundProperty) as Brush;
-        set => SetValue(InfoForegroundProperty, value);
+    public Brush LogInfoForeground {
+        get => GetValue(LogInfoForegroundProperty) as Brush;
+        set => SetValue(LogInfoForegroundProperty, value);
     }
 
     /// <summary>
-    /// Identifies the <see cref="WarnForeground"/> dependency property.
+    /// Identifies the <see cref="LogWarnForeground"/> dependency property.
     /// </summary>
-    public static readonly DependencyProperty WarnForegroundProperty = RegisterForeground(nameof(WarnForeground));
+    public static readonly DependencyProperty LogWarnForegroundProperty = RegisterForeground(nameof(LogWarnForeground));
 
     /// <summary>
     /// Gets or sets the brush used to draw <see cref="LogSeverity.Warn"/> entries.
@@ -362,15 +362,15 @@ public sealed class LogControl : Control {
     /// <value>
     /// A brush, or null to use <see cref="Control.Foreground"/>.
     /// </value>
-    public Brush WarnForeground {
-        get => GetValue(WarnForegroundProperty) as Brush;
-        set => SetValue(WarnForegroundProperty, value);
+    public Brush LogWarnForeground {
+        get => GetValue(LogWarnForegroundProperty) as Brush;
+        set => SetValue(LogWarnForegroundProperty, value);
     }
 
     /// <summary>
-    /// Identifies the <see cref="ErrorForeground"/> dependency property.
+    /// Identifies the <see cref="LogErrorForeground"/> dependency property.
     /// </summary>
-    public static readonly DependencyProperty ErrorForegroundProperty = RegisterForeground(nameof(ErrorForeground));
+    public static readonly DependencyProperty LogErrorForegroundProperty = RegisterForeground(nameof(LogErrorForeground));
 
     /// <summary>
     /// Gets or sets the brush used to draw <see cref="LogSeverity.Error"/> entries.
@@ -378,16 +378,16 @@ public sealed class LogControl : Control {
     /// <value>
     /// A brush, or null to use <see cref="Control.Foreground"/>.
     /// </value>
-    public Brush ErrorForeground {
-        get => GetValue(ErrorForegroundProperty) as Brush;
-        set => SetValue(ErrorForegroundProperty, value);
+    public Brush LogErrorForeground {
+        get => GetValue(LogErrorForegroundProperty) as Brush;
+        set => SetValue(LogErrorForegroundProperty, value);
     }
 
     /// <summary>
-    /// Identifies the <see cref="CriticalForeground"/> dependency property.
+    /// Identifies the <see cref="LogCriticalForeground"/> dependency property.
     /// </summary>
-    public static readonly DependencyProperty CriticalForegroundProperty =
-        RegisterForeground(nameof(CriticalForeground));
+    public static readonly DependencyProperty LogCriticalForegroundProperty =
+        RegisterForeground(nameof(LogCriticalForeground));
 
     /// <summary>
     /// Gets or sets the brush used to draw <see cref="LogSeverity.Critical"/> entries.
@@ -395,16 +395,16 @@ public sealed class LogControl : Control {
     /// <value>
     /// A brush, or null to use <see cref="Control.Foreground"/>.
     /// </value>
-    public Brush CriticalForeground {
-        get => GetValue(CriticalForegroundProperty) as Brush;
-        set => SetValue(CriticalForegroundProperty, value);
+    public Brush LogCriticalForeground {
+        get => GetValue(LogCriticalForegroundProperty) as Brush;
+        set => SetValue(LogCriticalForegroundProperty, value);
     }
 
     /// <summary>
-    /// Identifies the <see cref="ScrollViewerStyle"/> dependency property.
+    /// Identifies the <see cref="LogScrollViewerStyle"/> dependency property.
     /// </summary>
-    public static readonly DependencyProperty ScrollViewerStyleProperty = DependencyProperty.Register(
-        name: nameof(ScrollViewerStyle),
+    public static readonly DependencyProperty LogScrollViewerStyleProperty = DependencyProperty.Register(
+        name: nameof(LogScrollViewerStyle),
         propertyType: typeof(Style),
         ownerType: typeof(LogControl),
         typeMetadata: new PropertyMetadata(
@@ -417,16 +417,16 @@ public sealed class LogControl : Control {
     /// A style targeting <see cref="ScrollViewer"/>, or null to use the default style, which shows
     /// each scroll bar when it is needed.
     /// </value>
-    public Style ScrollViewerStyle {
-        get => GetValue(ScrollViewerStyleProperty) as Style;
-        set => SetValue(ScrollViewerStyleProperty, value);
+    public Style LogScrollViewerStyle {
+        get => GetValue(LogScrollViewerStyleProperty) as Style;
+        set => SetValue(LogScrollViewerStyleProperty, value);
     }
 
     /// <summary>
     /// Initializes a new log display control.
     /// </summary>
     public LogControl() {
-        Presenter = new LogPresenter(this, DefaultLineLimit);
+        Presenter = new LogPresenter(this, LogLineLimitDefault);
         Presenter.SetBinding(MarginProperty, new Binding(nameof(Padding)) {
             Source = this
         });
@@ -434,7 +434,7 @@ public sealed class LogControl : Control {
             dispatcher: Dispatcher,
             deliver: Deliver,
             filter: new LogFilter(LogSeverity.Info, null, null),
-            pendingLimit: DefaultLineLimit);
+            pendingLimit: LogLineLimitDefault);
         CommandBindings.Add(new CommandBinding(ApplicationCommands.Copy, Copy));
         Loaded += LogControl_Loaded;
         Unloaded += LogControl_Unloaded;

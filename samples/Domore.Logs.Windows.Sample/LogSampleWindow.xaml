@@ -14,11 +14,11 @@
     <Style x:Key="DarkLogStyle" TargetType="logs:LogControl">
       <Setter Property="Background" Value="#1E1E1E"/>
       <Setter Property="Foreground" Value="#D4D4D4"/>
-      <Setter Property="DebugForeground" Value="#7F7F7F"/>
-      <Setter Property="InfoForeground" Value="#9CDCFE"/>
-      <Setter Property="WarnForeground" Value="#DCDCAA"/>
-      <Setter Property="ErrorForeground" Value="#F48771"/>
-      <Setter Property="CriticalForeground" Value="#FF4D4D"/>
+      <Setter Property="LogDebugForeground" Value="#7F7F7F"/>
+      <Setter Property="LogInfoForeground" Value="#9CDCFE"/>
+      <Setter Property="LogWarnForeground" Value="#DCDCAA"/>
+      <Setter Property="LogErrorForeground" Value="#F48771"/>
+      <Setter Property="LogCriticalForeground" Value="#FF4D4D"/>
     </Style>
     <Style x:Key="Caption" TargetType="TextBlock">
       <Setter Property="Margin" Value="0,14,0,4"/>
@@ -59,7 +59,7 @@
 
         <TextBlock Style="{StaticResource Caption}" Text="Threshold"/>
         <ComboBox ItemsSource="{x:Static local:LogSampleWindow.Thresholds}"
-                  SelectedItem="{Binding Threshold, ElementName=LogView}"/>
+                  SelectedItem="{Binding LogThreshold, ElementName=LogView}"/>
         <TextBlock Style="{StaticResource Note}"
                    Text="The lowest severity shown. Entries below it are never formatted."/>
 
@@ -76,7 +76,7 @@
 
         <TextBlock Style="{StaticResource Caption}" Text="Line limit"/>
         <ComboBox ItemsSource="{x:Static local:LogSampleWindow.LineLimits}" ItemStringFormat="N0"
-                  SelectedItem="{Binding LineLimit, ElementName=LogView}"/>
+                  SelectedItem="{Binding LogLineLimit, ElementName=LogView}"/>
         <TextBlock Style="{StaticResource Note}"
                    Text="The oldest lines are discarded once the limit is reached."/>
 

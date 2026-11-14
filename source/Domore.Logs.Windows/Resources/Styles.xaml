@@ -10,9 +10,9 @@
             BorderBrush="{TemplateBinding BorderBrush}"
             BorderThickness="{TemplateBinding BorderThickness}"
             SnapsToDevicePixels="True">
-      <ScrollViewer x:Name="PART_ScrollViewer"
+      <ScrollViewer x:Name="PART_LogScrollViewer"
                     CanContentScroll="True"
-                    Style="{Binding ScrollViewerStyle,
+                    Style="{Binding LogScrollViewerStyle,
                                     RelativeSource={RelativeSource TemplatedParent},
                                     TargetNullValue={StaticResource _LogScrollViewerStyleDefault}}"/>
     </Border>
@@ -22,10 +22,10 @@
     <Setter Property="Foreground" Value="{DynamicResource {x:Static SystemColors.WindowTextBrushKey}}"/>
     <Setter Property="FontFamily" Value="Consolas"/>
     <Setter Property="Padding" Value="2"/>
-    <Setter Property="DebugForeground" Value="Gray"/>
-    <Setter Property="WarnForeground" Value="DarkGoldenrod"/>
-    <Setter Property="ErrorForeground" Value="Crimson"/>
-    <Setter Property="CriticalForeground" Value="Red"/>
+    <Setter Property="LogDebugForeground" Value="Gray"/>
+    <Setter Property="LogWarnForeground" Value="DarkGoldenrod"/>
+    <Setter Property="LogErrorForeground" Value="Crimson"/>
+    <Setter Property="LogCriticalForeground" Value="Red"/>
   </Style>
   <Style TargetType="{x:Type dwc:LogControl}" BasedOn="{StaticResource LogControlStyle}">
     <Setter Property="Template" Value="{StaticResource _LogControlTemplate}"/>

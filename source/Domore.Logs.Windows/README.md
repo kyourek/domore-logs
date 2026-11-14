@@ -7,7 +7,7 @@ displays entries written through `ILog` as they are logged.
 <Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:logs="clr-namespace:Domore.Windows.Controls;assembly=Domore.Logs.Windows">
-  <logs:LogControl Threshold="Debug" LineLimit="5000" />
+  <logs:LogControl LogThreshold="Debug" LogLineLimit="5000" />
 </Window>
 ```
 
@@ -29,7 +29,7 @@ view; End resumes following, and Escape clears the selection. The selection
 keeps its rows while older lines are discarded. The arrow keys, Page Up,
 Page Down, Home, and End scroll the view.
 
-`Threshold` sets the lowest severity displayed. The default is `Info`, and
+`LogThreshold` sets the lowest severity displayed. The default is `Info`, and
 `None` displays nothing. Set `LogTypes`, `LogNames`, or both to display only
 entries whose `LogType` or `LogName` is listed. When both are null or empty,
 entries of every type are displayed. Collections that implement
@@ -40,22 +40,23 @@ LogView.LogTypes = [typeof(MainWindow)];
 LogView.LogNames = ["Worker"];
 ```
 
-`LineLimit` is the number of lines retained, 10,000 by default. When it is
+`LogLineLimit` is the number of lines retained, 10,000 by default. When it is
 reached, the oldest lines are discarded as new lines arrive. Entries that arrive
 faster than the dispatcher can draw them are bounded by the same limit.
 
 Style the control with `Background`, `Foreground`, `BorderBrush`,
 `BorderThickness`, `Padding`, and the font properties, which default to
-Consolas. `DebugForeground`, `InfoForeground`, `WarnForeground`,
-`ErrorForeground`, and `CriticalForeground` color entries by severity; a null
-brush uses `Foreground`. `ScrollViewerStyle` styles the scroll viewer.
+Consolas. `LogDebugForeground`, `LogInfoForeground`, `LogWarnForeground`,
+`LogErrorForeground`, and `LogCriticalForeground` color entries by severity;
+a null brush uses `Foreground`. `LogScrollViewerStyle` styles the scroll
+viewer.
 
 ```xml
 <logs:LogControl Background="#1E1E1E"
                  Foreground="Gainsboro"
                  FontSize="12"
-                 InfoForeground="LightSkyBlue"
-                 ErrorForeground="OrangeRed" />
+                 LogInfoForeground="LightSkyBlue"
+                 LogErrorForeground="OrangeRed" />
 ```
 
 The project targets `net462`, `net48`, `net8.0-windows`, and `net10.0-windows`,

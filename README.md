@@ -40,7 +40,7 @@ of lines, and filters by severity threshold, log type, and log name.
 
 ```xml
 <logs:LogControl xmlns:logs="clr-namespace:Domore.Windows.Controls;assembly=Domore.Logs.Windows"
-                 Threshold="Debug" />
+                 LogThreshold="Debug" />
 ```
 
 Run the sample to see it with a live workload:

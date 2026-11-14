@@ -120,7 +120,7 @@ public sealed class LogControlTest {
         var control = Attached(c => {
             c.Background = Brushes.White;
             c.Foreground = Brushes.Black;
-            c.ScrollViewerStyle = HiddenScrollBars();
+            c.LogScrollViewerStyle = HiddenScrollBars();
         });
         try {
             var root = new Border { FlowDirection = flowDirection, Child = control };
@@ -235,7 +235,7 @@ public sealed class LogControlTest {
     [Test]
     public void DisplaysEntriesAtOrAboveThreshold() {
         WpfTestThread.Run(async () => {
-            var control = Attached(c => c.Threshold = LogSeverity.Warn);
+            var control = Attached(c => c.LogThreshold = LogSeverity.Warn);
             FirstLog.Info("info");
             FirstLog.Warn("warn");
             FirstLog.Critical("critical");
@@ -254,7 +254,7 @@ public sealed class LogControlTest {
             FirstLog.Debug("debug");
             FirstLog.Info("info");
             var lines = await Lines(control);
-            Assert.That(control.Threshold, Is.EqualTo(LogSeverity.Info));
+            Assert.That(control.LogThreshold, Is.EqualTo(LogSeverity.Info));
             Assert.That(Messages(lines), Is.EqualTo(new[] { "inf FirstType info" }));
         });
     }
@@ -262,7 +262,7 @@ public sealed class LogControlTest {
     [Test]
     public void ThresholdNoneDisplaysNothing() {
         WpfTestThread.Run(async () => {
-            var control = Attached(c => c.Threshold = LogSeverity.None);
+            var control = Attached(c => c.LogThreshold = LogSeverity.None);
             FirstLog.Critical("critical");
             Assert.That(await Lines(control), Is.Empty);
         });
@@ -271,9 +271,9 @@ public sealed class LogControlTest {
     [Test]
     public void ChangingThresholdAppliesToLaterEntries() {
         WpfTestThread.Run(async () => {
-            var control = Attached(c => c.Threshold = LogSeverity.Error);
+            var control = Attached(c => c.LogThreshold = LogSeverity.Error);
             FirstLog.Info("before");
-            control.Threshold = LogSeverity.Debug;
+            control.LogThreshold = LogSeverity.Debug;
             FirstLog.Debug("after");
             var lines = await Lines(control);
             Assert.That(Messages(lines), Is.EqualTo(new[] { "dbg FirstType after" }));
@@ -348,7 +348,7 @@ public sealed class LogControlTest {
     [Test]
     public void LineLimitDiscardsOldestLines() {
         WpfTestThread.Run(async () => {
-            var control = Attached(c => c.LineLimit = 3);
+            var control = Attached(c => c.LogLineLimit = 3);
             for (var i = 0; i < 10; i++) {
                 FirstLog.Info(i);
             }
@@ -369,7 +369,7 @@ public sealed class LogControlTest {
                 FirstLog.Info(i);
             }
             await Lines(control);
-            control.LineLimit = 2;
+            control.LogLineLimit = 2;
             var lines = await Lines(control);
             Assert.That(Messages(lines), Is.EqualTo(new[] {
                 "inf FirstType 3",
@@ -382,7 +382,7 @@ public sealed class LogControlTest {
     public void LineLimitMustBePositive() {
         WpfTestThread.Run(() => {
             var control = new LogControl();
-            Assert.That(() => control.LineLimit = 0, Throws.ArgumentException);
+            Assert.That(() => control.LogLineLimit = 0, Throws.ArgumentException);
             return Task.CompletedTask;
         });
     }
@@ -445,7 +445,7 @@ public sealed class LogControlTest {
     [Test]
     public void ViewKeepsItsLinesWhileScrolledAway() {
         WpfTestThread.Run(async () => {
-            var control = Attached(c => c.LineLimit = 100);
+            var control = Attached(c => c.LogLineLimit = 100);
             Layout(control, 400, 100);
             for (var i = 0; i < 100; i++) {
                 FirstLog.Info(i);
@@ -490,7 +490,7 @@ public sealed class LogControlTest {
             await Lines(control);
             Layout(control, 400, 100);
             Assert.That(control.Presenter.RealizedCount, Is.EqualTo(1));
-            control.InfoForeground = Brushes.Red;
+            control.LogInfoForeground = Brushes.Red;
             Assert.That(control.Presenter.RealizedCount, Is.EqualTo(0));
             control.UpdateLayout();
             Assert.That(control.Presenter.RealizedCount, Is.EqualTo(1));
@@ -685,7 +685,7 @@ public sealed class LogControlTest {
     [Test]
     public void LargeMultilineEntryKeepsNewestLinesWithoutStagingEveryLine() {
         WpfTestThread.Run(async () => {
-            var control = Attached(c => c.LineLimit = 2);
+            var control = Attached(c => c.LogLineLimit = 2);
             FirstLog.Info(string.Join("\n", Enumerable.Range(0, 200000)));
 #if NETCOREAPP
             var allocated = GC.GetAllocatedBytesForCurrentThread();
@@ -735,7 +735,7 @@ public sealed class LogControlTest {
     [Test]
     public void DiscardedLinesDoNotKeepSourceEntryAlive() {
         WpfTestThread.Run(async () => {
-            var control = Attached(c => c.LineLimit = 2);
+            var control = Attached(c => c.LogLineLimit = 2);
             var capture = LogCaptured(20000, 50);
             var lines = await Lines(control);
             Collect();
@@ -767,7 +767,7 @@ public sealed class LogControlTest {
     [Test]
     public void CopyUsesSelectedRowsAndKeepsThemAsHistoryRolls() {
         WpfTestThread.Run(async () => {
-            var control = Attached(c => c.LineLimit = 4);
+            var control = Attached(c => c.LogLineLimit = 4);
             foreach (var text in new[] { "zero", "one", "two", "three" }) {
                 FirstLog.Info(text);
             }
@@ -906,7 +906,7 @@ public sealed class LogControlTest {
     [Test]
     public void ControlWithHiddenScrollBarsSizesToItsTextInUnboundedWidth() {
         WpfTestThread.Run(async () => {
-            var control = Attached(c => c.ScrollViewerStyle = HiddenScrollBars());
+            var control = Attached(c => c.LogScrollViewerStyle = HiddenScrollBars());
             var panel = new StackPanel { Orientation = Orientation.Horizontal };
             panel.Children.Add(control);
             control.BeginInit();
