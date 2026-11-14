@@ -95,8 +95,7 @@ internal sealed class MyNewClass {
     internal string MyInternalString {
         get;
         set {
-            bool valueIsNull = value is null;
-            if (valueIsNull) {
+            if (value is null) {
                 throw new ArgumentNullException(nameof(MyInternalString));
             }
             field = value;
@@ -172,9 +171,12 @@ code more complicated, such as when the field must be `volatile`.
   accessors are fine when they keep the property clear.
 - Always use braces around statement bodies, including `if`/`else`, `do`, `for`,
   `foreach`, `while`, `using`, and `lock`, even when the body is one statement.
-- Always use a descriptively named `bool` variable as the condition of an `if`.
-  Keep logic out of `if` and `while` conditions by calculating it beforehand;
-  update the condition variable explicitly inside loops.
+- Use simple conditions directly in `if`, `while`, `for`, and similar
+  statements: a null check such as `is null`, a boolean variable or property, a
+  negation, or a single comparison. For a complex condition, such as one that
+  combines several tests or calls, calculate it beforehand into a descriptively
+  named boolean variable declared with `var`, and update that variable
+  explicitly inside loops.
 - Check reference values for null with `is null` and `is not null`. Prefer these
   patterns over `== null` and `!= null`.
 - Prefer `/* ... */` block comments, with ` * ` at the start of each interior
@@ -183,10 +185,13 @@ code more complicated, such as when the field must be `volatile`.
 - In XML documentation, put each element's opening tag, content, and closing tag
   on separate lines. Document public APIs; do not add XML documentation comments
   to private or internal members.
+- Prefer `var` for local variables that have an initializer, including boolean
+  condition variables. Use an explicit type only when the declaration has no
+  initializer or `var` would not infer the intended type.
 - Use PascalCase for types and members, and prefix interfaces with `I`. Follow
-  the repository's member ordering and `var` preferences. Prefer private
-  `readonly` fields where possible, keep fields non-public, and put each type in
-  a separate file named after the type.
+  the repository's member ordering. Prefer private `readonly` fields where
+  possible, keep fields non-public, and put each type in a separate file named
+  after the type.
 - Prefer file-scoped namespaces where supported by the project, and declare
   closed concrete classes `sealed`.
 
@@ -203,8 +208,8 @@ code more complicated, such as when the field must be `volatile`.
 
 ## Project structure
 
-- `domore-logs.slnx` is the solution entry point. It contains two packable
-  libraries, one sample application, and two test projects.
+- `domore-logs.slnx` is the solution entry point. It contains three packable
+  libraries, two sample applications, and three test projects.
 - Root build configuration:
   - `global.json` selects the .NET 10.0.100 SDK.
   - `Directory.Build.props` defines common package metadata and C# settings.
@@ -223,9 +228,21 @@ code more complicated, such as when the field must be `volatile`.
     - `Properties/AssemblyInfo.cs` contains assembly-level metadata.
   - `Domore.Logs.Conf/` contains the `Domore.Logs.Conf` library, which
     configures `Domore.Logs` from the external `Domore.Conf` package.
+  - `Domore.Logs.Windows/` contains the `Domore.Logs.Windows` WPF library,
+    which overrides the shared targets with `net462`, `net48`,
+    `net8.0-windows`, and `net10.0-windows`.
+    - `Windows/Controls/` holds the public `LogControl` and its internal
+      subscription, filter, line buffer, glyph table, line formatter, and
+      retained glyph-run presenter.
+    - `Themes/Generic.xaml` merges the default style from
+      `Resources/Styles.xaml`.
 - `samples/Domore.Logs.Sample/` is a non-packable console sample that
-  references both library projects. Its build settings target `net40`,
+  references the `Domore.Logs` and `Domore.Logs.Conf` projects. Its build settings target `net40`,
   `net462`, and `net10.0`.
+- `samples/Domore.Logs.Windows.Sample/` is a non-packable WPF application
+  targeting `net10.0-windows` that shows `LogControl` with a simulated
+  workload and live settings for its threshold, filters, line limit, font,
+  and theme.
 - `tests/` contains non-packable NUnit test projects:
   - `Directory.Build.props` supplies the test SDK, NUnit, test analyzer, and
     test adapter, and targets `net462`, `net48`, `net8.0`, and `net10.0`.
@@ -233,24 +250,11 @@ code more complicated, such as when the field must be `volatile`.
     `Logs/` and `Logs/Services/`; reusable doubles live in `Logs/Mocks/`.
   - `Domore.Logs.ProcessExitProbe/` is a `net10.0` executable used by
     process-exit tests.
+  - `Domore.Logs.Windows.Tests/` tests `Domore.Logs.Windows` on WPF targets
+    `net462`, `net48`, `net8.0-windows`, and `net10.0-windows`. Tests run
+    on an STA dispatcher through `Windows/WpfTestThread.cs`.
 - `.github/workflows/workflow.yml` restores, builds, and tests on pushes to
   `dev`, and packs and pushes NuGet packages for published releases.
 - Root documentation and repository files include `README.md`, `LICENSE`,
   `.gitattributes`, `.gitignore`, `spelling.exclusion.dic`, and this
   `AGENTS.md` file.
-
-## Code reviews
-
-- When asked to review code, inspect the full requested scope and record each
-  finding with its impact, a suggested resolution, and file and line references
-  where applicable. Read any existing review findings first, preserve their
-  identifiers, and avoid duplicate findings.
-- When findings use stable issue numbers, assign new findings numbers greater than
-  the highest number already used. Do not renumber or reuse numbers, including for
-  resolved findings.
-- When asked to fix review findings, work only on the specified issues. Prefer
-  regression tests that demonstrate each issue before fixing it. Keep resolved
-  findings in the review record and mark them resolved.
-- Before reporting completion, inspect the final diff and any new or untracked
-  files for unintended changes, whitespace problems, and accidental public API
- additions.

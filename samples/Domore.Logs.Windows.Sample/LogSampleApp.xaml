@@ -1,0 +1,6 @@
+﻿<Application x:Class="Domore.Windows.LogSampleApp"
+             x:ClassModifier="internal"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             StartupUri="LogSampleWindow.xaml">
+</Application>

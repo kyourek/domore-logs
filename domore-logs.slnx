@@ -5,10 +5,12 @@
   </Folder>
   <Folder Name="/samples/">
     <Project Path="samples/Domore.Logs.Sample/Domore.Logs.Sample.csproj" />
+    <Project Path="samples/Domore.Logs.Windows.Sample/Domore.Logs.Windows.Sample.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/Domore.Logs.ProcessExitProbe/Domore.Logs.ProcessExitProbe.csproj" />
     <Project Path="tests/Domore.Logs.Tests/Domore.Logs.Tests.csproj" />
+    <Project Path="tests/Domore.Logs.Windows.Tests/Domore.Logs.Windows.Tests.csproj" />
   </Folder>
   <Folder Name="/_/">
     <File Path=".editorconfig" />
@@ -33,4 +35,5 @@
   </Folder>
   <Project Path="source/Domore.Logs.Conf/Domore.Logs.Conf.csproj" />
   <Project Path="source/Domore.Logs/Domore.Logs.csproj" />
+  <Project Path="source/Domore.Logs.Windows/Domore.Logs.Windows.csproj" />
 </Solution>
