@@ -102,6 +102,35 @@ internal static class LogLineFormatter {
         }
     }
 
+    /*
+     * Collect newest-first so a multiline burst only visits lines that can
+     * survive the history limit. The caller reverses the completed batch once.
+     */
+    public static void SplitNewest(ILogEntry entry, List<LogLine> lines, int limit) {
+        var messages = entry.LogList as IList<string> ?? entry.LogList?.ToArray() ?? [];
+        var kind = messages.Count == 1 ? LogLineKind.Headed : LogLineKind.Indented;
+        for (var i = messages.Count - 1; i >= 0 && lines.Count < limit; i--) {
+            var text = messages[i] ?? string.Empty;
+            var stop = text.Length;
+            var more = true;
+            while (more) {
+                var separator = stop > 0 ? text.LastIndexOf('\n', stop - 1) : -1;
+                var start = separator + 1;
+                var length = stop - start;
+                bool endsWithReturn = length > 0 && text[stop - 1] == '\r';
+                if (endsWithReturn) {
+                    length--;
+                }
+                lines.Add(new LogLine(entry, text, start, length, kind));
+                stop = separator;
+                more = separator >= 0 && lines.Count < limit;
+            }
+        }
+        bool needsHeader = messages.Count != 1 && lines.Count < limit;
+        if (needsHeader) {
+            lines.Add(new LogLine(entry, null, 0, 0, LogLineKind.Header));
+        }
+    }
     public static int Write(LogLine line, ref char[] buffer) {
         var nameLength = line.Entry.LogName?.Length ?? 0;
         var capacity = HeaderPadding + nameLength + TabWidth * line.Length;

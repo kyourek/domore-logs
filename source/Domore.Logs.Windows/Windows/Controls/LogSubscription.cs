@@ -21,18 +21,32 @@ internal sealed class LogSubscription : ILogSubscription {
         Locker = new();
 
     private readonly Dispatcher Dispatcher;
-    private readonly Action<IReadOnlyCollection<ILogEntry>> Deliver;
-    private Queue<ILogEntry> Pending = new();
+    private readonly Action<IReadOnlyList<ILogEntry>> Deliver;
+    private readonly Queue<ILogEntry> Pending = new();
+    private const int BatchSize = 64;
     private bool FlushQueued;
 
     private void Flush() {
-        Queue<ILogEntry> batch;
+        var batch = new List<ILogEntry>(BatchSize);
         lock (Locker) {
-            batch = Pending;
-            Pending = new Queue<ILogEntry>();
-            FlushQueued = false;
+            var count = Math.Min(BatchSize, Pending.Count);
+            for (var i = 0; i < count; i++) {
+                batch.Add(Pending.Dequeue());
+            }
         }
-        Deliver(batch);
+        try {
+            Deliver(batch);
+        }
+        finally {
+            bool queueAgain;
+            lock (Locker) {
+                queueAgain = Pending.Count > 0;
+                FlushQueued = queueAgain;
+            }
+            if (queueAgain) {
+                QueueFlush();
+            }
+        }
     }
 
     private void QueueFlush() {
@@ -93,11 +107,12 @@ internal sealed class LogSubscription : ILogSubscription {
                     Pending.Dequeue();
                     overLimit = Pending.Count > field;
                 }
+                Pending.TrimExcess();
             }
         }
     }
 
-    public LogSubscription(Dispatcher dispatcher, Action<IReadOnlyCollection<ILogEntry>> deliver, LogFilter filter, int pendingLimit) {
+    public LogSubscription(Dispatcher dispatcher, Action<IReadOnlyList<ILogEntry>> deliver, LogFilter filter, int pendingLimit) {
         Dispatcher = dispatcher ?? throw new ArgumentNullException(nameof(dispatcher));
         Deliver = deliver ?? throw new ArgumentNullException(nameof(deliver));
         Filter = filter;

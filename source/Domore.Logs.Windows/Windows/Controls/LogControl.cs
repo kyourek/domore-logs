@@ -6,6 +6,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Media;
+using System.Windows.Input;
 
 namespace Domore.Windows.Controls;
 
@@ -29,7 +30,7 @@ public sealed class LogControl : Control {
     private const string ScrollViewerTemplatePartName = "PART_ScrollViewer";
     private const int DefaultLineLimit = 10000;
 
-    private readonly List<LogLine> DeliveredLines = [];
+    private List<LogLine> DeliveredLines = [];
     private ScrollViewer ScrollViewerPart;
 
     private static DependencyProperty RegisterForeground(string name) {
@@ -72,24 +73,53 @@ public sealed class LogControl : Control {
         Subscription.Filter = new LogFilter(Threshold, LogTypes, LogNames);
     }
 
-    private void Deliver(IReadOnlyCollection<ILogEntry> entries) {
+    private void Deliver(IReadOnlyList<ILogEntry> entries) {
         var filter = Subscription.Filter;
-        foreach (var entry in entries) {
-            /*
-             * The filter may have changed while the entry was pending.
-             */
-            bool included = filter.Includes(entry.LogSeverity, entry.LogType, entry.LogName);
-            if (included) {
-                LogLineFormatter.Split(entry, DeliveredLines);
+        try {
+            for (var i = entries.Count - 1; i >= 0 && DeliveredLines.Count < LineLimit; i--) {
+                var entry = entries[i];
+                bool included = filter.Includes(entry.LogSeverity, entry.LogType, entry.LogName);
+                if (included) {
+                    LogLineFormatter.SplitNewest(entry, DeliveredLines, LineLimit);
+                }
+            }
+            DeliveredLines.Reverse();
+            bool hasLines = DeliveredLines.Count > 0;
+            if (hasLines) {
+                Presenter.Append(DeliveredLines);
             }
         }
-        bool hasLines = DeliveredLines.Count > 0;
-        if (hasLines) {
-            Presenter.Append(DeliveredLines);
+        finally {
             DeliveredLines.Clear();
         }
     }
 
+    private void Copy(object sender, ExecutedRoutedEventArgs e) {
+        var text = Presenter.CopyText();
+        bool hasText = text.Length > 0;
+        if (hasText) {
+            Clipboard.SetText(text);
+        }
+        e.Handled = true;
+    }
+
+    /// <inheritdoc/>
+    protected override void OnKeyDown(KeyEventArgs e) {
+        base.OnKeyDown(e);
+        switch (e.Key) {
+            case Key.Escape: Presenter.ClearSelection(); break;
+            case Key.Up: Presenter.LineUp(); break;
+            case Key.Down: Presenter.LineDown(); break;
+            case Key.Left: Presenter.LineLeft(); break;
+            case Key.Right: Presenter.LineRight(); break;
+            case Key.PageUp: Presenter.PageUp(); break;
+            case Key.PageDown: Presenter.PageDown(); break;
+            case Key.Home: Presenter.SetVerticalOffset(0); break;
+            case Key.End: Presenter.SetVerticalOffset(double.PositiveInfinity); break;
+            default: return;
+        }
+        e.Handled = true;
+    }
     internal LogPresenter Presenter { get; }
     internal LogSubscription Subscription { get; }
 
@@ -226,6 +256,7 @@ public sealed class LogControl : Control {
             propertyChangedCallback: (s, e) => {
                 var self = (LogControl)s;
                 var limit = (int)e.NewValue;
+                self.DeliveredLines = new List<LogLine>();
                 self.Subscription.PendingLimit = limit;
                 self.Presenter.SetLineLimit(limit);
             }),
@@ -362,6 +393,8 @@ public sealed class LogControl : Control {
             deliver: Deliver,
             filter: new LogFilter(LogSeverity.Info, null, null),
             pendingLimit: DefaultLineLimit);
+        Focusable = true;
+        CommandBindings.Add(new CommandBinding(ApplicationCommands.Copy, Copy));
         Loaded += LogControl_Loaded;
         Unloaded += LogControl_Unloaded;
     }

@@ -13,14 +13,23 @@ displays entries written through `ILog` as they are logged.
 
 The control subscribes through `Logging.Subscribe` while it is loaded and
 unsubscribes when it is unloaded. No logging configuration is required. Entries
-may be logged on any thread; they are queued and drawn in batches on the
-control's dispatcher. Lines are formatted and drawn only when they scroll into
-view. Each visible line is drawn once as a glyph run and kept while it stays in
-view, so scrolling and following new entries move existing lines rather than
-redrawing them. A line with characters the font cannot map is drawn with
-`FormattedText` so that font fallback applies. The view follows new entries
-while it is scrolled to the end, and keeps its position otherwise. The
-horizontal scroll range is the widest line drawn so far.
+may be logged on any thread. A bounded queue hands entries to the dispatcher in
+batches of at most 64, allowing input and rendering between batches. Pending
+overflow discards the oldest entries; this viewer is a window onto recent logs,
+not durable log storage.
+
+Only visible lines have drawings. WPF's text formatter handles Unicode shaping,
+bidirectional text, and font fallback. Drawings are retained while visible and
+reused during scrolling. Very long lines remain a single horizontally scrollable
+row, including formatter continuations. The view follows new entries while
+scrolled to the end and preserves the visible history when scrolled away.
+The horizontal scroll range is the widest line drawn so far.
+
+Click a row to select it, Shift-click or drag to select a range, and press Ctrl+C
+to copy selected rows. With no selection, Ctrl+C copies all retained rows.
+Arrow keys, Page Up/Down, Home, and End navigate the view. End resumes following
+new entries. Selecting rows pauses following; Escape clears the selection.
+Selection tracks row identity as old history is discarded.
 
 `Threshold` sets the lowest severity displayed. The default is `Info`, and
 `None` displays nothing. Set `LogTypes`, `LogNames`, or both to display only
@@ -35,7 +44,10 @@ LogView.LogNames = ["Worker"];
 
 `LineLimit` is the number of lines retained, 10,000 by default. When it is
 reached, the oldest lines are discarded as new lines arrive. Entries that arrive
-faster than the dispatcher can draw them are bounded by the same limit.
+faster than the dispatcher can draw them are bounded by the same entry count.
+Multiline entries are scanned from the end and only the newest lines that fit
+are staged. These are count bounds, not byte bounds: message strings are kept
+by reference, and an individual message can be arbitrarily large.
 
 Style the control with `Background`, `Foreground`, `BorderBrush`,
 `BorderThickness`, `Padding`, and the font properties, which default to

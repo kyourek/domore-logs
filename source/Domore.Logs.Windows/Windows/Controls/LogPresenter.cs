@@ -1,30 +1,21 @@
 ﻿using Domore.Logs;
 using System;
 using System.Collections.Generic;
-using System.Globalization;
+using System.Text;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
+using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Media.TextFormatting;
 
 namespace Domore.Windows.Controls;
 
 /*
- * Retains one DrawingVisual per visible line inside a container visual.
- * Scrolling and following new lines move the container, and only lines that
- * enter the viewport are drawn; their visuals are reused from lines that left
- * it. Realization runs during arrange, so it happens at most once per layout
- * pass however many changes occur in between.
- *
- * Lines are drawn as glyph runs built from the font's glyph map, bypassing
- * text layout. A line containing a character the font cannot map is drawn
- * with FormattedText so that font fallback applies.
- *
- * Line visuals are positioned relative to a base serial near the viewport,
- * which keeps coordinates small however many lines have been added.
+ * Retains only visible line drawings. WPF formats Unicode text, including
+ * shaping and fallback; formatter continuations share the same display row.
  */
 internal sealed class LogPresenter : FrameworkElement, IScrollInfo {
-    private const int MaxGlyphsPerRun = 1024;
     private const long RebaseDistance = 10000;
 
     private readonly LogControl Owner;
@@ -33,15 +24,13 @@ internal sealed class LogPresenter : FrameworkElement, IScrollInfo {
     private readonly List<long> Released = [];
     private readonly Stack<DrawingVisual> Reusable = new();
 
-    private char[] TextBuffer = new char[256];
-    private ushort[] IndexBuffer = new ushort[256];
-    private double[] AdvanceBuffer = new double[256];
     private bool FontIsCurrent;
     private bool FollowsEnd = true;
     private bool MeasuredUnbounded;
     private long BaseSerial;
+    private long? SelectionAnchor;
+    private long SelectionEnd;
     private Typeface Typeface;
-    private LogGlyphTable Glyphs;
     private double FontEmSize;
     private double PixelsPerDip = 1;
     private double LineHeight = 1;
@@ -58,13 +47,6 @@ internal sealed class LogPresenter : FrameworkElement, IScrollInfo {
         return Math.Max(0, Math.Min(value, max));
     }
 
-    private static T[] Fit<T>(T[] buffer, int length) {
-        bool fits = buffer.Length >= length;
-        return fits
-            ? buffer
-            : new T[Math.Max(length, 2 * buffer.Length)];
-    }
-
     private double Snap(double value) {
         return Math.Round(value * PixelsPerDip) / PixelsPerDip;
     }
@@ -79,10 +61,6 @@ internal sealed class LogPresenter : FrameworkElement, IScrollInfo {
         PixelsPerDip = VisualTreeHelper.GetDpi(this).PixelsPerDip;
         Typeface = new Typeface(Owner.FontFamily, Owner.FontStyle, Owner.FontWeight, Owner.FontStretch);
         FontEmSize = Owner.FontSize;
-        bool hasGlyphTypeface = Typeface.TryGetGlyphTypeface(out var glyphTypeface);
-        Glyphs = hasGlyphTypeface
-            ? new LogGlyphTable(glyphTypeface, FontEmSize)
-            : null;
         LineHeight = Math.Max(1, Math.Ceiling(Typeface.FontFamily.LineSpacing * FontEmSize * PixelsPerDip) / PixelsPerDip);
         Baseline = Snap(Typeface.FontFamily.Baseline * FontEmSize);
         ExtentWidth = 0;
@@ -119,79 +97,41 @@ internal sealed class LogPresenter : FrameworkElement, IScrollInfo {
             InvalidateMeasure();
         }
         InvalidateArrange();
+        InvalidateVisual();
     }
 
     private Brush GetBrush(LogSeverity severity) {
         return Owner.GetSeverityForeground(severity) ?? Brushes.Transparent;
     }
 
-    private bool DrawGlyphs(DrawingContext drawingContext, int length, Brush brush, out double width) {
-        width = 0;
-        IndexBuffer = Fit(IndexBuffer, length);
-        AdvanceBuffer = Fit(AdvanceBuffer, length);
-        for (var i = 0; i < length; i++) {
-            bool unmapped = Glyphs.TryGet(TextBuffer[i], out IndexBuffer[i], out AdvanceBuffer[i]) == false;
-            if (unmapped) {
-                return false;
-            }
-        }
-        /*
-         * Long lines are split into several runs, each with its own arrays
-         * because a glyph run keeps the lists it is given.
-         */
+    private double Draw(TextFormatter formatter, DrawingVisual visual, LogLine line) {
+        var text = LogLineFormatter.Format(line);
+        var properties = new LogTextProperties(Typeface, FontEmSize, GetBrush(line.Severity), PixelsPerDip);
+        var source = new LogTextSource(text, properties, PixelsPerDip);
+        var paragraph = new LogParagraphProperties(properties);
         var x = 0.0;
-        for (var start = 0; start < length; start += MaxGlyphsPerRun) {
-            var count = Math.Min(MaxGlyphsPerRun, length - start);
-            var indices = new ushort[count];
-            var advances = new double[count];
-            Array.Copy(IndexBuffer, start, indices, 0, count);
-            Array.Copy(AdvanceBuffer, start, advances, 0, count);
-            var glyphRun = new GlyphRun(
-                glyphTypeface: Glyphs.Typeface,
-                bidiLevel: 0,
-                isSideways: false,
-                renderingEmSize: FontEmSize,
-                pixelsPerDip: (float)PixelsPerDip,
-                glyphIndices: indices,
-                baselineOrigin: new Point(x, Baseline),
-                advanceWidths: advances,
-                glyphOffsets: null,
-                characters: null,
-                deviceFontName: null,
-                clusterMap: null,
-                caretStops: null,
-                language: null);
-            drawingContext.DrawGlyphRun(brush, glyphRun);
-            for (var i = 0; i < count; i++) {
-                x += advances[i];
+        var position = 0;
+        TextLineBreak previous = null;
+        using (var drawing = visual.RenderOpen()) {
+            try {
+                bool hasText = position < text.Length;
+                while (hasText) {
+                    using (var formatted = formatter.FormatLine(source, position, 0, paragraph, previous)) {
+                        previous?.Dispose();
+                        previous = null;
+                        formatted.Draw(drawing, new Point(x, Baseline - formatted.Baseline), InvertAxes.None);
+                        x += formatted.WidthIncludingTrailingWhitespace;
+                        position += formatted.Length;
+                        previous = formatted.GetTextLineBreak();
+                    }
+                    hasText = position < text.Length;
+                }
+            }
+            finally {
+                previous?.Dispose();
             }
         }
-        width = x;
-        return true;
-    }
-
-    private double Draw(DrawingVisual visual, LogLine line) {
-        var length = LogLineFormatter.Write(line, ref TextBuffer);
-        var brush = GetBrush(line.Severity);
-        using (var drawingContext = visual.RenderOpen()) {
-            var width = 0.0;
-            bool drawnAsGlyphs = Glyphs is not null && DrawGlyphs(drawingContext, length, brush, out width);
-            if (drawnAsGlyphs) {
-                return width;
-            }
-            var formattedText = new FormattedText(
-                new string(TextBuffer, 0, length),
-                CultureInfo.CurrentUICulture,
-                FlowDirection.LeftToRight,
-                Typeface,
-                FontEmSize,
-                brush,
-                PixelsPerDip) {
-                MaxLineCount = 1
-            };
-            drawingContext.DrawText(formattedText, new Point(0, 0));
-            return formattedText.WidthIncludingTrailingWhitespace;
-        }
+        return x;
     }
 
     private void Realize() {
@@ -218,19 +158,21 @@ internal sealed class LogPresenter : FrameworkElement, IScrollInfo {
             }
         }
         var width = ExtentWidth;
-        for (var serial = first; serial <= last; serial++) {
-            bool realized = Realized.ContainsKey(serial);
-            if (realized) {
-                continue;
+        using (var formatter = TextFormatter.Create()) {
+            for (var serial = first; serial <= last; serial++) {
+                bool realized = Realized.ContainsKey(serial);
+                if (realized) {
+                    continue;
+                }
+                bool mustCreate = Reusable.Count == 0;
+                var visual = mustCreate ? new DrawingVisual() : Reusable.Pop();
+                if (mustCreate) {
+                    Content.Children.Add(visual);
+                }
+                width = Math.Max(width, Draw(formatter, visual, Lines[(int)(serial - firstSerial)]));
+                visual.Offset = new Vector(0, (serial - BaseSerial) * LineHeight);
+                Realized[serial] = visual;
             }
-            bool mustCreate = Reusable.Count == 0;
-            var visual = mustCreate ? new DrawingVisual() : Reusable.Pop();
-            if (mustCreate) {
-                Content.Children.Add(visual);
-            }
-            width = Math.Max(width, Draw(visual, Lines[(int)(serial - firstSerial)]));
-            visual.Offset = new Vector(0, (serial - BaseSerial) * LineHeight);
-            Realized[serial] = visual;
         }
         while (Reusable.Count > 0) {
             Content.Children.Remove(Reusable.Pop());
@@ -280,11 +222,88 @@ internal sealed class LogPresenter : FrameworkElement, IScrollInfo {
          * A transparent background makes the whole viewport hit-testable.
          */
         drawingContext.DrawRectangle(Brushes.Transparent, null, new Rect(RenderSize));
+        bool hasSelection = SelectionAnchor.HasValue && Lines.Count > 0;
+        if (hasSelection) {
+            var first = Math.Max(Lines.FirstSerial, Math.Min(SelectionAnchor.Value, SelectionEnd));
+            var last = Math.Min(Lines.AddedCount - 1, Math.Max(SelectionAnchor.Value, SelectionEnd));
+            var top = Math.Max(0, (first - Lines.FirstSerial) * LineHeight - VerticalOffset);
+            var bottom = Math.Min(RenderSize.Height, (last - Lines.FirstSerial + 1) * LineHeight - VerticalOffset);
+            bool visible = bottom > top;
+            if (visible) {
+                drawingContext.PushOpacity(0.3);
+                drawingContext.DrawRectangle(SystemColors.HighlightBrush, null, new Rect(0, top, RenderSize.Width, bottom - top));
+                drawingContext.Pop();
+            }
+        }
     }
 
     protected override void OnDpiChanged(DpiScale oldDpi, DpiScale newDpi) {
         base.OnDpiChanged(oldDpi, newDpi);
         InvalidateFont();
+    }
+
+    internal void SelectLine(double y, bool extend) {
+        bool hasLines = Lines.Count > 0;
+        if (hasLines) {
+            var index = (int)Clamp(Math.Floor((VerticalOffset + y) / LineHeight), Lines.Count - 1);
+            FollowsEnd = false;
+            SelectionEnd = Lines.FirstSerial + index;
+            bool startsSelection = extend == false || SelectionAnchor.HasValue == false;
+            if (startsSelection) {
+                SelectionAnchor = SelectionEnd;
+            }
+            InvalidateVisual();
+        }
+    }
+
+    internal void ClearSelection() {
+        SelectionAnchor = null;
+        InvalidateVisual();
+    }
+    internal string CopyText() {
+        var first = Lines.FirstSerial;
+        var last = Lines.AddedCount - 1;
+        bool hasSelection = SelectionAnchor.HasValue;
+        if (hasSelection) {
+            first = Math.Max(first, Math.Min(SelectionAnchor.Value, SelectionEnd));
+            last = Math.Min(last, Math.Max(SelectionAnchor.Value, SelectionEnd));
+        }
+        var text = new StringBuilder();
+        for (var serial = first; serial <= last; serial++) {
+            text.AppendLine(LogLineFormatter.Format(Lines[(int)(serial - Lines.FirstSerial)]));
+        }
+        return text.ToString();
+    }
+
+    protected override void OnMouseLeftButtonDown(MouseButtonEventArgs e) {
+        base.OnMouseLeftButtonDown(e);
+        Owner.Focus();
+        SelectLine(e.GetPosition(this).Y, (Keyboard.Modifiers & ModifierKeys.Shift) != 0);
+        CaptureMouse();
+        e.Handled = true;
+    }
+
+    protected override void OnMouseMove(MouseEventArgs e) {
+        base.OnMouseMove(e);
+        bool dragging = IsMouseCaptured && e.LeftButton == MouseButtonState.Pressed;
+        if (dragging) {
+            var y = e.GetPosition(this).Y;
+            bool above = y < 0;
+            bool below = y > RenderSize.Height;
+            if (above) {
+                LineUp();
+            }
+            if (below) {
+                LineDown();
+            }
+            SelectLine(y, true);
+        }
+    }
+
+    protected override void OnMouseLeftButtonUp(MouseButtonEventArgs e) {
+        base.OnMouseLeftButtonUp(e);
+        ReleaseMouseCapture();
+        e.Handled = true;
     }
 
     public LogLineBuffer Lines { get; }
@@ -331,17 +350,20 @@ internal sealed class LogPresenter : FrameworkElement, IScrollInfo {
         FontIsCurrent = false;
         InvalidateMeasure();
         InvalidateArrange();
+        InvalidateVisual();
     }
 
     public void InvalidateLines() {
         ReleaseAll();
         InvalidateArrange();
+        InvalidateVisual();
     }
 
     public void SetHorizontalOffset(double offset) {
         HorizontalOffset = Clamp(offset, MaxHorizontalOffset);
         ScrollOwner?.InvalidateScrollInfo();
         InvalidateArrange();
+        InvalidateVisual();
     }
 
     public void SetVerticalOffset(double offset) {
@@ -349,6 +371,7 @@ internal sealed class LogPresenter : FrameworkElement, IScrollInfo {
         FollowsEnd = MaxVerticalOffset - VerticalOffset < 1;
         ScrollOwner?.InvalidateScrollInfo();
         InvalidateArrange();
+        InvalidateVisual();
     }
 
     public void LineUp() {
@@ -383,12 +406,17 @@ internal sealed class LogPresenter : FrameworkElement, IScrollInfo {
         SetHorizontalOffset(HorizontalOffset + ViewportWidth);
     }
 
+    internal static double WheelDistance(int lines, double lineHeight, double viewportHeight) {
+        bool pageMode = lines < 0;
+        return pageMode ? viewportHeight : Math.Min(viewportHeight, lines * lineHeight);
+    }
+
     public void MouseWheelUp() {
-        SetVerticalOffset(VerticalOffset - SystemParameters.WheelScrollLines * LineHeight);
+        SetVerticalOffset(VerticalOffset - WheelDistance(SystemParameters.WheelScrollLines, LineHeight, ViewportHeight));
     }
 
     public void MouseWheelDown() {
-        SetVerticalOffset(VerticalOffset + SystemParameters.WheelScrollLines * LineHeight);
+        SetVerticalOffset(VerticalOffset + WheelDistance(SystemParameters.WheelScrollLines, LineHeight, ViewportHeight));
     }
 
     public void MouseWheelLeft() {
