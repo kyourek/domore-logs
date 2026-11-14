@@ -43,6 +43,12 @@ of lines, and filters by severity threshold, log type, and log name.
                  Threshold="Debug" />
 ```
 
+Run the sample to see it with a live workload:
+
+```powershell
+dotnet run --project samples/Domore.Logs.Windows.Sample
+```
+
 ## License
 
 [MIT](LICENSE) © Ken Yourek

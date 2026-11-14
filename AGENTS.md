@@ -204,7 +204,7 @@ code more complicated, such as when the field must be `volatile`.
 ## Project structure
 
 - `domore-logs.slnx` is the solution entry point. It contains three packable
-  libraries, one sample application, and three test projects.
+  libraries, two sample applications, and three test projects.
 - Root build configuration:
   - `global.json` selects the .NET 10.0.100 SDK.
   - `Directory.Build.props` defines common package metadata and C# settings.
@@ -234,6 +234,10 @@ code more complicated, such as when the field must be `volatile`.
 - `samples/Domore.Logs.Sample/` is a non-packable console sample that
   references the `Domore.Logs` and `Domore.Logs.Conf` projects. Its build settings target `net40`,
   `net462`, and `net10.0`.
+- `samples/Domore.Logs.Windows.Sample/` is a non-packable WPF application
+  targeting `net10.0-windows` that shows `LogControl` with a simulated
+  workload and live settings for its threshold, filters, line limit, font,
+  and theme.
 - `tests/` contains non-packable NUnit test projects:
   - `Directory.Build.props` supplies the test SDK, NUnit, test analyzer, and
     test adapter, and targets `net462`, `net48`, `net8.0`, and `net10.0`.

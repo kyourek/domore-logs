@@ -1,0 +1,14 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFrameworks>net10.0-windows</TargetFrameworks>
+    <UseWPF>true</UseWPF>
+  </PropertyGroup>
+  <ItemGroup>
+    <ApplicationDefinition Include="LogSampleApp.xaml" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\source\Domore.Logs.Windows\Domore.Logs.Windows.csproj" />
+    <ProjectReference Include="..\..\source\Domore.Logs\Domore.Logs.csproj" />
+  </ItemGroup>
+</Project>

@@ -5,6 +5,7 @@
   </Folder>
   <Folder Name="/samples/">
     <Project Path="samples/Domore.Logs.Sample/Domore.Logs.Sample.csproj" />
+    <Project Path="samples/Domore.Logs.Windows.Sample/Domore.Logs.Windows.Sample.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/Domore.Logs.ProcessExitProbe/Domore.Logs.ProcessExitProbe.csproj" />
